@@ -3,3 +3,5 @@ typings/
 .npm
 *.log
 logs
+dist/
+src/old_service.ts
