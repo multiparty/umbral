@@ -13,9 +13,9 @@ describe('hello test', () => {
 
     const randId: Uint8Array = (_sodium.crypto_hash('helloWorld')).slice(0, 32);;
 
-    // _sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId);
     CryptoService.init(_sodium)
-    CryptoService.encryptData(randId, 'meow', [ocKeyPair.publicKey])
+    var encryptedData = CryptoService.encryptData(randId, 'meow', [ocKeyPair.publicKey], userKeys.privateKey);
+
   });
 });
 
