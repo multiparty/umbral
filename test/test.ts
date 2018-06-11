@@ -14,7 +14,10 @@ describe('hello test', () => {
     const randId: Uint8Array = (_sodium.crypto_hash('helloWorld')).slice(0, 32);;
 
     CryptoService.init(_sodium)
-    var encryptedData = CryptoService.encryptData(randId, 'meow', [ocKeyPair.publicKey], userKeys.privateKey);
+    var encryptedDataA = CryptoService.encryptData(randId, 'meow', [ocKeyPair.publicKey], userKeys.privateKey);
+    var encryptedDataB = CryptoService.encryptData(randId, 'meowmeow', [ocKeyPair.publicKey], userKeys.privateKey);
+
+    CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeys.publicKey);
 
   });
 });

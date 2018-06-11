@@ -17,6 +17,7 @@
   "dependencies": {
     "@types/node": "^10.3.2",
     "big-integer": "^1.6.30",
+    "encoding": "^0.1.12",
     "jquery": "^3.3.1",
     "libsodium-wrappers": "^0.7.3",
     "text-encoding": "^0.6.4"

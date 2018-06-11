@@ -1,6 +1,7 @@
 import bigInt = require('big-integer')
 import * as $ from 'jquery';
 import _sodium = require('libsodium-wrappers');
+import * as encoding from 'text-encoding';
 
 export interface IRecord {
   randId: Uint8Array;
@@ -11,6 +12,20 @@ export interface IEncryptedData {
   readonly matchingIndex: string;
   readonly eOC: string;
   readonly eRecord: string;
+}
+
+
+export interface IDecryptedData {
+  readonly decryptedRecords: object;
+  readonly slope: bigInt.BigInteger;
+  readonly intercept: bigInt.BigInteger;
+  readonly k: Uint8Array;
+}
+
+interface IShare {
+  readonly x: bigInt.BigInteger;
+  readonly y: bigInt.BigInteger
+  readonly eRecordKey: string;
 }
 
 export namespace CryptoService {
@@ -61,6 +76,33 @@ export namespace CryptoService {
 
     return encryptedData;
   }  
+
+  export function decryptData(encryptedData: Array<IEncryptedData>, skOC: Uint8Array, pkUser: Uint8Array): void {
+   
+    let shares: IShare[] = [];
+
+    for (var i in encryptedData) {
+      shares.push(asymmetricDecrypt(encryptedData[i], skOC, pkUser));
+    }
+
+    console.log(shares);
+
+    return null;
+    
+  }
+
+  function asymmetricDecrypt(encryptedData: IEncryptedData, skOC: Uint8Array, pkUser: Uint8Array): IShare {
+
+    const split: string[] = encryptedData.eOC.split("$");
+    const c: Uint8Array = sodium.from_base64(split[0]);
+    const nonce: Uint8Array = sodium.from_base64(split[1]);
+    const msg: Uint8Array = sodium.crypto_box_open_easy(c, nonce, pkUser, skOC);
+
+
+
+    return JSON.parse(new encoding.TextDecoder("utf-8").decode(msg));
+  }
+
 
 
   /**
