@@ -27,8 +27,7 @@ function createName(): string {
   return name;
 }
 
-describe('hello test', () => {
-  
+describe('End-to-end tests', () => {
   
   it('basic example', async function() {
     await _sodium.ready;
@@ -123,6 +122,41 @@ it('stress test', async function() {
       const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
 
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
+    }
+  });
+
+  it('multiple perpIds and multiple OCs', async function() {
+    await _sodium.ready;
+    CryptoService.init(_sodium);
+
+    const ocNum = 5;
+    let ocPubKeys = [];
+    let ocPrivKeys = [];
+
+    for (var i = 0; i < ocNum; i++) {
+      let key = _sodium.crypto_box_keypair();
+
+      ocPubKeys.push(key.publicKey);
+      ocPrivKeys.push(key.privateKey);
+    }
+    
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    for (var i = 0; i < ocNum; i++) {
+
+      let perpId: string = createName()
+      const randId: Uint8Array = hashId(perpId);
+      let userId: string = createName();
+
+      let encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
+      userId = userId + userId;
+      let encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
+
+
+      for (var j = 0; j < ocNum; j++) {
+        let decryptedRecords = CryptoService.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], userKeyPair.publicKey);
+        expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
+      }
     }
   });
 });
