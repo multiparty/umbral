@@ -35,16 +35,16 @@ describe('hello test', () => {
     CryptoService.init(_sodium);
   
     const ocKeyPair = _sodium.crypto_box_keypair();
-    const userKeys = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
 
     const perpId = createName();
     let userId = createName();
     const randId: Uint8Array = hashId(perpId);
 
-    const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeys.privateKey);
+    const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     userId = userId + userId;
-    const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeys.privateKey);
-    const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeys.publicKey);
+    const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
     expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
   });
 
@@ -54,7 +54,7 @@ it('stress test', async function() {
     CryptoService.init(_sodium);
 
     const ocKeyPair = _sodium.crypto_box_keypair();
-    const userKeys = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
 
     const testNum: number = 100;
     for (let i: number = 0; i < testNum; i++) {
@@ -62,12 +62,12 @@ it('stress test', async function() {
       const randId: Uint8Array = hashId(perpId);
       let userId: string = createName();
 
-      const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeys.privateKey);
+      const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
 
       userId = userId + userId;
-      const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId}, [ocKeyPair.publicKey], userKeys.privateKey);
+      const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId}, [ocKeyPair.publicKey], userKeyPair.privateKey);
       
-      const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeys.publicKey);
+      const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
 
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
@@ -88,22 +88,42 @@ it('stress test', async function() {
       ocPrivKeys.push(key.privateKey);
     }
 
-    const userKeys = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
 
     const perpId: string = createName();
     const randId: Uint8Array = hashId(perpId);
     let userId: string = createName();
 
-    const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, ocPubKeys, userKeys.privateKey);
+    const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
     userId = userId + userId;
-    const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, ocPubKeys, userKeys.privateKey);
+    const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
 
 
     for (var i = 0; i < ocNum; i++) {
-      const decryptedRecords = CryptoService.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], userKeys.publicKey);
+      const decryptedRecords = CryptoService.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], userKeyPair.publicKey);
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
   });
 
+
+  it('multiple perpIds', async function() {
+    const perpIds: string[] = ['twitter', 'linkedin', 'facebook'];
+    let userId: string = createName();
+
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    for (var i = 0; i < perpIds.length; i++) {
+      let perpId = perpIds[i];
+      const randId: Uint8Array = hashId(perpId);
+      
+      const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+      userId = userId + userId;
+      const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+      const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
+
+      expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
+    }
+  });
 });
 
