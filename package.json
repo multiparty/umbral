@@ -27,13 +27,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/multiparty/callisto-crypto.git"
+    "url": "git+https://github.com/multiparty/crypto-service.git"
   },
   "author": "Lucy Qin <lucyzqin@gmail.com>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/multiparty/callisto-crypto/issues"
+    "url": "https://github.com/multiparty/crypto-service/issues"
   },
-  "homepage": "https://github.com/multiparty/callisto-crypto#readme",
+  "homepage": "https://github.com/multiparty/crypto-service#readme",
   "description": ""
 }
