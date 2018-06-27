@@ -4,4 +4,3 @@ typings/
 *.log
 logs
 dist/
-src/old_service.ts

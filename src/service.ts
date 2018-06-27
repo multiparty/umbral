@@ -1,6 +1,4 @@
 import bigInt = require('big-integer')
-import * as $ from 'jquery';
-import _sodium = require('libsodium-wrappers');
 import * as encoding from 'text-encoding';
 
 export interface IRecord {
@@ -13,7 +11,6 @@ export interface IEncryptedData {
   readonly eOC: string;
   readonly eRecord: string;
 }
-
 
 export interface IDecryptedData {
   readonly decryptedRecords: object;
@@ -29,24 +26,30 @@ interface IShare {
 }
 
 export namespace CryptoService {
+  /* Uninitialized sodium instance */
   let sodium = null;
 
   const HEX: number = 16;
-
   const PRIME: bigInt.BigInteger = bigInt(
     '115792089237316195423570985008687907853269984665640564039457584007913129639936',
   ).plus(bigInt(297));
 
+  /**
+   * Initializes sodium
+   * @param _sodium initialized sodium instance
+   */
   export function init(_sodium): void {
     sodium = _sodium;
   }
 
-  /**
-   * Function for taking user inputs and returning values to be encrypted
-   * @param {string} perpId - inputted perpetrator name
-   * @param {string} userName - inputted user name
-   * @returns {IPlainTextData} promise resolving a IPlainTextData object
-   */
+   /**
+    * Encrypts a user's record
+    * @param {Uint8Array} randId - random ID
+    * @param {IRecord} record - user record
+    * @param {Uint8Array[]} publicKeys - options counselor public keys
+    * @param {Uint8Array} skUser - user's secret key
+    * @returns {IEncryptedData[]} an array of records encrypted under each public key
+    */
   export function encryptData(randId: Uint8Array, record: IRecord, publicKeys: Uint8Array[], skUser: Uint8Array): IEncryptedData[] {
     if (publicKeys.length < 1) {
       return undefined;
@@ -59,8 +62,6 @@ export namespace CryptoService {
     const U: bigInt.BigInteger = bigInt(sodium.to_hex(sodium.crypto_hash(record.userId).slice(0, 32)), HEX);
     const kStr: string = bytesToString(k);
     const s: bigInt.BigInteger = (slope.times(U).plus(bigInt(kStr))).mod(PRIME);
-    
-    
     const recordKey: Uint8Array = sodium.crypto_secretbox_keygen();
 
     const eRecord: string = symmetricEncrypt(recordKey, JSON.stringify(record));
@@ -81,19 +82,17 @@ export namespace CryptoService {
     return encryptedData;
   }  
 
-
-    /**
-   * Get real mod of value, instead of bigInt's mod() which returns the remainder.
-   * Necessary for negative values.
-   * @param {bigInt} val Input value
-   * @returns {bigInt.BigInteger} Value with real mod applied
+  /**
+   * Mathematically correct mod over a prime
+   * @param {bigInt.BigInteger} val - input value 
+   * @returns {bigInt.BigInteger}
    */
   function realMod(val: bigInt.BigInteger): bigInt.BigInteger {
     return val.mod(PRIME).add(PRIME).mod(PRIME);
   }
 
   /**
-   * Computes a slope based on the slope formula
+   * Computes a slope using two points
    * @param {IShare} c1 - 1st coordinate
    * @param {IShare} c2 - 2nd coordinate
    * @returns {bigInt.BigInteger} slope value
@@ -105,9 +104,16 @@ export namespace CryptoService {
     return top.multiply(bottom.modInv(PRIME)).mod(PRIME);
   }
 
-
+  /**
+   * Decrypts an array of encrypted data
+   * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
+   * @param {Uint8Array} skOC - secret key of an options counselor
+   * @param pkUser - user's private key
+   * @returns {IRecord[]} array of decrypted records from matched users
+   */
   export function decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkUser: Uint8Array): IRecord[] {
    
+    // TODO: CHECK MATCHES
     if (encryptedData.length < 2) {
       return null;
     }
@@ -124,8 +130,6 @@ export namespace CryptoService {
  
     const decryptedRecords: IRecord[] = decryptRecords(shares, [encryptedData[0].eRecord, encryptedData[1].eRecord], k);
 
-
-
     return decryptedRecords;
     
   }
@@ -133,9 +137,9 @@ export namespace CryptoService {
 
   /**
    * Symmetric decryption
-   * @param {string} key - base 64 encoding
-   * @param {string} cipherText - base 64 encoding
-   * @returns {Uint8Array} decrypted value
+   * @param {Uint8Array} key 
+   * @param {string} cipherText - in base 64 encoding with a nonce split on ("$")
+   * @return {Uint8Array} decrypted data
    */
   function symmetricDecrypt(key: Uint8Array, cipherText: string): Uint8Array {
     const split: string[] = cipherText.split("$");
@@ -144,7 +148,6 @@ export namespace CryptoService {
       return undefined;
     }
 
-    // Uint8Arrays
     const cT: Uint8Array = sodium.from_base64(split[0]);
     const nonce: Uint8Array = sodium.from_base64(split[1]);
     const decrypted: Uint8Array = sodium.crypto_secretbox_open_easy(cT, nonce, key);
@@ -153,10 +156,11 @@ export namespace CryptoService {
   }
 
   /**
-   * Handles record decryption based on RID
-   * @param {Array<IEncryptedData>} data - matched encrypted data
-   * @param {string} rid - randomized perpetrator ID
-   * @returns {Array<IRecord>} array of decrypted records
+   * Decrypt all records
+   * @param {IShare[]} data - coordinates
+   * @param {string[]} eRecords - encrypted records
+   * @param {Uint8Array} k - derived key from linear interpolation
+   * @returns {IRecord[]} decrypted records
    */
   function decryptRecords(data: IShare[], eRecords: string[], k: Uint8Array): IRecord[] {
 
@@ -168,17 +172,17 @@ export namespace CryptoService {
       const dStr: string = new encoding.TextDecoder("utf-8").decode(decryptedRecord);
       decryptedRecords.push(JSON.parse(dStr));
     }
-
     return decryptedRecords;
   }
 
+
   /**
-   * Converts a string representing an integer to a Uint8Array
-   * @param {string} intercept
-   * @returns {Uint8Array} 32-byte key
+   * Converts a string representation of a number to a Uint8Array of bytes
+   * @param str - string representation
+   * @returns {Uint8Array}
    */
-  function stringToBytes(intercept: string): Uint8Array {
-    let value: bigInt.BigInteger = bigInt(intercept);
+  function stringToBytes(str: string): Uint8Array {
+    let value: bigInt.BigInteger = bigInt(str);
     const result: number[] = [];
 
     for (let i: number = 0; i < 32; i++) {
@@ -189,14 +193,13 @@ export namespace CryptoService {
     return Uint8Array.from(result);
   }
 
-
-
-    /**
-   * Computes RID, which is the y-intercept
-   * @param {IShare} c1 - a given coordinate
-   * @param {bigInt.BigInteger} slope
+  /**
+   * Calculates the y-intercept using a coordinate and slope
+   * @param {IShare} c1 - a coordinate
+   * @param {bigInt.BigInteger} slope 
+   * @returns {bigInt.BigInteger} y-intercept
    */
-  function getIntercept(c1: IShare, slope: bigInt.BigInteger): bigInt.BigInteger {
+   function getIntercept(c1: IShare, slope: bigInt.BigInteger): bigInt.BigInteger {
     const x: bigInt.BigInteger = c1.x;
     const y: bigInt.BigInteger = c1.y;
     const mult: bigInt.BigInteger = (slope.times(x));
@@ -204,9 +207,13 @@ export namespace CryptoService {
     return realMod(y.minus(mult));
   }
 
-
-
-
+  /**
+   * Asymmetric decryption
+   * @param {IEncryptedData} encryptedData 
+   * @param {Uint8Array} skOC - secret key of an options counselor
+   * @param {Uint8Array} pkUser - public key of a user
+   * @returns {IShare} a decrypted coordinate
+   */
   function asymmetricDecrypt(encryptedData: IEncryptedData, skOC: Uint8Array, pkUser: Uint8Array): IShare {
 
     const split: string[] = encryptedData.eOC.split("$");
@@ -225,12 +232,15 @@ export namespace CryptoService {
 
 
 
+
   /**
-   * Encrypts y using public-key encryption with the OC's public key
-   * @param {bigInt.BigInteger} y - value derived from mx + RID
-   * @returns {string} the encrypted value in base 64 encoding
+   * Asymmetric encryption
+   * @param {string} message - a plaintext string
+   * @param {Uint8Array} pkOC - the public key of an options counselor
+   * @param {Uint8Array} skUser - secret key of a user
+   * @returns {string} encrypted string in base 64 encoding 
    */
-  function asymmetricEncrypt(message: string, pkOC: Uint8Array, skUser): string {
+  function asymmetricEncrypt(message: string, pkOC: Uint8Array, skUser: Uint8Array): string {
 
     const nonce: Uint8Array = sodium.randombytes_buf(sodium.crypto_box_NONCEBYTES);
     const cY: Uint8Array = sodium.crypto_box_easy(
@@ -241,10 +251,10 @@ export namespace CryptoService {
   }
 
   /**
-   * Symmetric encryption using given key
-   * @param {Uint8Array} key - 32 byte key
-   * @param {string} msg
-   * @returns {string} ciphertext concatenated with a nonce, both in base 64 encoding
+   * Symmetric encryption
+   * @param {Uint8Array} key  
+   * @param {string} msg plaintext string
+   * @returns {string} encrypted string in base 64 encoding
    */
   function symmetricEncrypt(key: Uint8Array, msg: string): string {
     const nonce: Uint8Array = sodium.randombytes_buf(sodium.crypto_box_NONCEBYTES);
@@ -254,19 +264,16 @@ export namespace CryptoService {
     return encrypted;
   }
 
-
-
-
   /**
-   * Converts a Uint8Array to a string representation of its integer value
-   * @param {Uint8Array} k - 32 byte key
+   * Converts bytes to their string representation of a number
+   * @param {Uint8Array} bytes 
    * @returns {string}
    */
-  function bytesToString(k: Uint8Array): string {
+  function bytesToString(bytes: Uint8Array): string {
     let result: bigInt.BigInteger = bigInt(0);
 
-    for (let i: number = k.length - 1; i >= 0; i--) {
-      result = result.or(bigInt(k[i]).shiftLeft((i * 8)));
+    for (let i: number = bytes.length - 1; i >= 0; i--) {
+      result = result.or(bigInt(bytes[i]).shiftLeft((i * 8)));
     }
 
     return result.toString();

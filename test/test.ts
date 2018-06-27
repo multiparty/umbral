@@ -1,6 +1,5 @@
 import { CryptoService } from '../src/index';
 import { expect } from 'chai';
-import { IRecord } from '../src/service';
 var _sodium = require('libsodium-wrappers');
 
 function hashId(id: string): Uint8Array {
