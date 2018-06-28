@@ -57,3 +57,12 @@ const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encrypted
 ```
 
 Additional examples can be found under ```test/tests.ts```
+
+### Relevant Interfaces
+A record is currently only a perpetrator ID and a user ID. This can be amended to include additional information.
+```
+export interface IRecord {
+  perpId: string;
+  userId: string;
+}
+```
