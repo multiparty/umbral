@@ -1,6 +1,6 @@
 {
   "name": "umbral",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -31,8 +31,8 @@
     "type": "git",
     "url": "git+https://github.com/multiparty/umbral.git"
   },
-  "author": "Lucy Qin <lucyzqin@gmail.com>",
-  "license": "ISC",
+  "author": "Boston University - Software & Application Innovation Lab",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/multiparty/umbral/issues"
   },
