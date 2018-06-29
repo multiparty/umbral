@@ -1,4 +1,4 @@
-import { CryptoService } from '../src/index';
+import { umbral } from '../src/index';
 import { expect } from 'chai';
 var _sodium = require('libsodium-wrappers');
 
@@ -30,7 +30,7 @@ describe('End-to-end tests', () => {
   
   it('basic example', async function() {
     await _sodium.ready;
-    CryptoService.init(_sodium);
+    umbral.init(_sodium);
   
     const ocKeyPair = _sodium.crypto_box_keypair();
     const userKeyPair = _sodium.crypto_box_keypair();
@@ -39,17 +39,17 @@ describe('End-to-end tests', () => {
     let userId = createName();
     const randId: Uint8Array = hashId(perpId);
 
-    const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    const encryptedDataA = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     userId = userId + userId;
-    const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-    const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
+    const encryptedDataB = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
     expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
   });
 
   
 it('stress test', async function() {
     await _sodium.ready;
-    CryptoService.init(_sodium);
+    umbral.init(_sodium);
 
     const ocKeyPair = _sodium.crypto_box_keypair();
     const userKeyPair = _sodium.crypto_box_keypair();
@@ -60,12 +60,12 @@ it('stress test', async function() {
       const randId: Uint8Array = hashId(perpId);
       let userId: string = createName();
 
-      const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+      const encryptedDataA = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
 
       userId = userId + userId;
-      const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId}, [ocKeyPair.publicKey], userKeyPair.privateKey);
+      const encryptedDataB = umbral.encryptData(randId, { perpId, userId}, [ocKeyPair.publicKey], userKeyPair.privateKey);
       
-      const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
+      const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
 
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
@@ -73,7 +73,7 @@ it('stress test', async function() {
 
   it('multiple OCs', async function() {
     await _sodium.ready;
-    CryptoService.init(_sodium);
+    umbral.init(_sodium);
 
     const ocNum = 5;
     let ocPubKeys = [];
@@ -92,13 +92,13 @@ it('stress test', async function() {
     const randId: Uint8Array = hashId(perpId);
     let userId: string = createName();
 
-    const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
+    const encryptedDataA = umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
     userId = userId + userId;
-    const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
+    const encryptedDataB = umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
 
 
     for (var i = 0; i < ocNum; i++) {
-      const decryptedRecords = CryptoService.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], userKeyPair.publicKey);
+      const decryptedRecords = umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], userKeyPair.publicKey);
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
   });
@@ -115,10 +115,10 @@ it('stress test', async function() {
       let perpId = perpIds[i];
       const randId: Uint8Array = hashId(perpId);
       
-      const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+      const encryptedDataA = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
       userId = userId + userId;
-      const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-      const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
+      const encryptedDataB = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+      const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
 
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
@@ -126,7 +126,7 @@ it('stress test', async function() {
 
   it('multiple perpIds and multiple OCs', async function() {
     await _sodium.ready;
-    CryptoService.init(_sodium);
+    umbral.init(_sodium);
 
     const ocNum = 5;
     let ocPubKeys = [];
@@ -147,13 +147,13 @@ it('stress test', async function() {
       const randId: Uint8Array = hashId(perpId);
       let userId: string = createName();
 
-      let encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
+      let encryptedDataA = umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
       userId = userId + userId;
-      let encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
+      let encryptedDataB = umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
 
 
       for (var j = 0; j < ocNum; j++) {
-        let decryptedRecords = CryptoService.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], userKeyPair.publicKey);
+        let decryptedRecords = umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], userKeyPair.publicKey);
         expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
       }
     }

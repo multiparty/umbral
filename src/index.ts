@@ -1,1 +1,1 @@
-export {CryptoService} from './service'
+export {umbral} from './service'

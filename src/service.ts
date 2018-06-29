@@ -25,7 +25,7 @@ interface IShare {
   readonly eRecordKey: string;
 }
 
-export namespace CryptoService {
+export namespace umbral {
   /* Uninitialized sodium instance */
   let sodium = null;
 
