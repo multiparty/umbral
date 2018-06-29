@@ -1,13 +1,13 @@
-# crypto-service
+# Umbral
 ### Installation
-
+```npm install umbral```
 
 ### Initialization
 The module must be initialized with a sodium instance.
 ```javascript
 let _sodium = null;
 await _sodium.ready;
-CryptoService.init(_sodium);
+umbral.init(_sodium);
 ```
 
 ### Encryption
@@ -41,7 +41,7 @@ function decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkUser: 
 ```javascript
 
 await _sodium.ready;
-CryptoService.init(_sodium);
+umbral.init(_sodium);
 
 const ocKeyPair = _sodium.crypto_box_keypair();
 const userKeyPair = _sodium.crypto_box_keypair();
@@ -50,10 +50,10 @@ const perpId = createName();
 let userId = createName();
 const randId: Uint8Array = hashId(perpId);
 
-const encryptedDataA = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+const encryptedDataA = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
 userId = userId + userId;
-const encryptedDataB = CryptoService.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-const decryptedRecords = CryptoService.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
+const encryptedDataB = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
 ```
 
 Additional examples can be found under ```test/tests.ts```
