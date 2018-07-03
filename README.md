@@ -1,4 +1,6 @@
 # Umbral
+[![Build Status](https://travis-ci.org/multiparty/umbral.svg?branch=master)](https://travis-ci.org/multiparty/umbral)
+
 ### Installation
 ```npm install umbral```
 
