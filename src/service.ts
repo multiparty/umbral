@@ -46,13 +46,13 @@ export namespace umbral {
     * Encrypts a user's record
     * @param {Uint8Array} randId - random ID
     * @param {IRecord} record - user record
-    * @param {Uint8Array[]} publicKeys - options counselor public keys
+    * @param {Uint8Array[]} pkOCs - options counselor public keys
     * @param {Uint8Array} skUser - user's secret key
     * @returns {IEncryptedData[]} an array of records encrypted under each public key
     */
-  export function encryptData(randId: Uint8Array, record: IRecord, publicKeys: Uint8Array[], skUser: Uint8Array): IEncryptedData[] {
-    if (publicKeys.length < 1) {
-      return undefined;
+  export function encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], skUser: Uint8Array): IEncryptedData[] {
+    if (pkOCs.length < 1) {
+      return [];
     }
 
     const slope: bigInt.BigInteger = bigInt(bytesToString(sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId)));
@@ -74,8 +74,8 @@ export namespace umbral {
 
     let encryptedData: IEncryptedData[] = [];
 
-    for (const i in publicKeys) {
-      let eOC = asymmetricEncrypt(JSON.stringify(msg), publicKeys[i], skUser);
+    for (const i in pkOCs) {
+      let eOC = asymmetricEncrypt(JSON.stringify(msg), pkOCs[i], skUser);
       encryptedData.push({matchingIndex, eOC, eRecord});
     }
 
@@ -123,11 +123,13 @@ export namespace umbral {
     for (var i in encryptedData) {
       shares.push(asymmetricDecrypt(encryptedData[i], skOC, pkUser));
     }
+    // todo: rename 0 and 1 to indicate they are parties
     const slope: bigInt.BigInteger = deriveSlope(shares[0], shares[1]);
     const intercept: bigInt.BigInteger = getIntercept(shares[0], slope);
 
     const k: Uint8Array = stringToBytes(intercept.toString());
  
+    // todo: double check this function call is with 2 points
     const decryptedRecords: IRecord[] = decryptRecords(shares, [encryptedData[0].eRecord, encryptedData[1].eRecord], k);
 
     return decryptedRecords;

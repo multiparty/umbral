@@ -11,7 +11,7 @@ function getRandom(max: number): number {
 }
 
 function createName(): string {
-
+  
   const alphabet: string[] = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
                               "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
   let name: string = "";
@@ -160,3 +160,5 @@ it('stress test', async function() {
   });
 });
 
+
+// TODO: write test case for more than 2 users submitting same perp name
