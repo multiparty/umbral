@@ -105,32 +105,55 @@ export namespace umbral {
   }
 
   /**
+   * Checks that all entries have matching index
+   * @param encryptedData 
+   */
+  function checkMatches(encryptedData) {
+    if (encryptedData.length < 2) {
+      throw new Error('Not enough matches');
+    }
+
+    var m = encryptedData[0].matchingIndex;
+    for (var i = 0; i < encryptedData.length; i++) {
+      if (m != encryptedData[0].matchingIndex) {
+        throw new Error('Incorrect match found');
+      }
+    }
+
+  }
+
+  /**
    * Decrypts an array of encrypted data
    * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
    * @param {Uint8Array} skOC - secret key of an options counselor
-   * @param pkUser - user's private key
+   * @param {Uint8Array[]} pkUser - user's private key
    * @returns {IRecord[]} array of decrypted records from matched users
    */
-  export function decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkUser: Uint8Array): IRecord[] {
-   
-    // TODO: CHECK MATCHES
-    if (encryptedData.length < 2) {
-      return null;
+  export function decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkUsers: Uint8Array[]): IRecord[] {
+
+    checkMatches(encryptedData);
+    if (encryptedData.length != pkUsers.length) {
+      throw new Error('Number of matches does not equal number of public keys for users');
     }
 
     let shares: IShare[] = [];
 
-    for (var i in encryptedData) {
-      shares.push(asymmetricDecrypt(encryptedData[i], skOC, pkUser));
+    for (let i in encryptedData) {
+      shares.push(asymmetricDecrypt(encryptedData[i], skOC, pkUsers[i]));
     }
-    // todo: rename 0 and 1 to indicate they are parties
+  
     const slope: bigInt.BigInteger = deriveSlope(shares[0], shares[1]);
     const intercept: bigInt.BigInteger = getIntercept(shares[0], slope);
 
     const k: Uint8Array = stringToBytes(intercept.toString());
+
+    const records: string[] = [];
+
+    for (let i = 0; i < encryptedData.length; i++) {
+      records.push(encryptedData[i].eRecord)
+    }
  
-    // todo: double check this function call is with 2 points
-    const decryptedRecords: IRecord[] = decryptRecords(shares, [encryptedData[0].eRecord, encryptedData[1].eRecord], k);
+    const decryptedRecords: IRecord[] = decryptRecords(shares, records, k);
 
     return decryptedRecords;
     

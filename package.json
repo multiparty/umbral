@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "mocha -r ts-node/register test/test.ts"
+    "test": "mocha -r ts-node/register test/umbral.spec.ts"
   },
   "devDependencies": {
     "@types/chai": "^4.1.3",
@@ -19,9 +19,11 @@
   "dependencies": {
     "@types/node": "^10.3.2",
     "big-integer": "^1.6.30",
+    "clean": "^4.0.2",
     "encoding": "^0.1.12",
     "jquery": "^3.3.1",
     "libsodium-wrappers": "^0.7.3",
+    "oprf": "0.0.3",
     "text-encoding": "^0.6.4"
   },
   "directories": {

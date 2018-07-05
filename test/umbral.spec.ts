@@ -1,4 +1,4 @@
-import { umbral } from '../src/index';
+import { umbral } from '../src/umbral';
 import { expect } from 'chai';
 var _sodium = require('libsodium-wrappers');
 
@@ -42,12 +42,34 @@ describe('End-to-end tests', () => {
     const encryptedDataA = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     userId = userId + userId;
     const encryptedDataB = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-    const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
+    const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]);
     expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
   });
 
+  it('basic example with 3 matches', async function() {
+    await _sodium.ready;
+    umbral.init(_sodium);
   
-it('stress test', async function() {
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPairA = _sodium.crypto_box_keypair();
+    const userKeyPairB = _sodium.crypto_box_keypair();
+    const userKeyPairC = _sodium.crypto_box_keypair();
+
+    const perpId = createName();
+    let userId = createName();
+    const randId: Uint8Array = hashId(perpId);
+
+    const encryptedDataA = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairA.privateKey);    
+    userId = userId + userId;
+    const encryptedDataB = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairB.privateKey);
+    userId = userId + userId;
+    const encryptedDataC = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairC.privateKey);
+
+    const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0], encryptedDataC[0]], ocKeyPair.privateKey, [userKeyPairA.publicKey, userKeyPairB.publicKey, userKeyPairC.publicKey]);
+    expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
+  });
+    
+  it('stress test', async function() {
     await _sodium.ready;
     umbral.init(_sodium);
 
@@ -65,7 +87,7 @@ it('stress test', async function() {
       userId = userId + userId;
       const encryptedDataB = umbral.encryptData(randId, { perpId, userId}, [ocKeyPair.publicKey], userKeyPair.privateKey);
       
-      const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
+      const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]);
 
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
@@ -98,7 +120,7 @@ it('stress test', async function() {
 
 
     for (var i = 0; i < ocNum; i++) {
-      const decryptedRecords = umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], userKeyPair.publicKey);
+      const decryptedRecords = umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], [userKeyPair.publicKey, userKeyPair.publicKey]);
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
   });
@@ -118,7 +140,7 @@ it('stress test', async function() {
       const encryptedDataA = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
       userId = userId + userId;
       const encryptedDataB = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-      const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
+      const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]);
 
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
@@ -153,7 +175,7 @@ it('stress test', async function() {
 
 
       for (var j = 0; j < ocNum; j++) {
-        let decryptedRecords = umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], userKeyPair.publicKey);
+        let decryptedRecords = umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], [userKeyPair.publicKey, userKeyPair.publicKey]);
         expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
       }
     }
