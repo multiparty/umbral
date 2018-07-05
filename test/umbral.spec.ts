@@ -182,5 +182,25 @@ describe('End-to-end tests', () => {
   });
 });
 
+describe('Error cases', () => {
+  it('basic example', async function() {
+    await _sodium.ready;
+    umbral.init(_sodium);
+  
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    const perpId = createName();
+    let userId = createName();
+    const randId: Uint8Array = hashId(perpId);
+
+    const encryptedDataA = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    userId = userId + userId;
+    const encryptedDataB = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+  
+    expect(() => umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey])).to.throw('Number of matches does not equal number of public keys for users')
+
+  });
+});
 
 // TODO: write test case for more than 2 users submitting same perp name

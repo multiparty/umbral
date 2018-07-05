@@ -126,7 +126,7 @@ export namespace umbral {
    * Decrypts an array of encrypted data
    * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
    * @param {Uint8Array} skOC - secret key of an options counselor
-   * @param {Uint8Array[]} pkUser - user's private key
+   * @param {Uint8Array[]} pkUser - user's public key
    * @returns {IRecord[]} array of decrypted records from matched users
    */
   export function decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkUsers: Uint8Array[]): IRecord[] {
