@@ -199,7 +199,6 @@ describe('Error cases', () => {
     const encryptedDataB = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
   
     expect(() => umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey])).to.throw('Number of matches does not equal number of public keys for users')
-
   });
 });
 

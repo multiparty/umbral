@@ -2,8 +2,8 @@ import bigInt = require('big-integer')
 import * as encoding from 'text-encoding';
 
 export interface IRecord {
-  perpId: string;
-  userId: string;
+  readonly perpId: string;
+  readonly userId: string;
 }
 
 export interface IEncryptedData {

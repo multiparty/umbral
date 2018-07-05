@@ -46,16 +46,17 @@ await _sodium.ready;
 umbral.init(_sodium);
 
 const ocKeyPair = _sodium.crypto_box_keypair();
-const userKeyPair = _sodium.crypto_box_keypair();
+const userKeyPairA = _sodium.crypto_box_keypair();
+const userKeyPairB = _sodium.crypto_box_keypair();
 
-const perpId = createName();
-let userId = createName();
+const perpId = 'facebook.com/Mallory';
 const randId: Uint8Array = hashId(perpId);
 
-const encryptedDataA = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-userId = userId + userId;
-const encryptedDataB = umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, userKeyPair.publicKey);
+const encryptedDataA = umbral.encryptData(randId, { perpId, 'Alice' }, [ocKeyPair.publicKey], userKeyPairA.privateKey);
+const encryptedDataB = umbral.encryptData(randId, { perpId, 'Bob' }, [ocKeyPair.publicKey], userKeyPairB.privateKey);
+const decryptedRecords = umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], 
+                                             ocKeyPair.privateKey, 
+                                             [userKeyPairA.publicKey, userKeyPairB.publicKey]);
 ```
 
 Additional examples can be found under ```test/tests.ts```
@@ -64,7 +65,7 @@ Additional examples can be found under ```test/tests.ts```
 A record is currently only a perpetrator ID and a user ID. This can be amended to include additional information.
 ```
 export interface IRecord {
-  perpId: string;
-  userId: string;
+  readonly perpId: string;
+  readonly userId: string;
 }
 ```
