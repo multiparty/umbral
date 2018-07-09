@@ -257,5 +257,3 @@ describe('Error cases', () => {
                         .to.throw('Incorrect match found');
   });
 });
-
-// TODO: write test case for more than 2 users submitting same perp name
