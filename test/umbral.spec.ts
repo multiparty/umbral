@@ -186,6 +186,20 @@ describe('End-to-end tests', () => {
 });
 
 describe('Error cases', () => {
+  it('Did not provide OC public key', async function() {
+    await _sodium.ready;
+    const _umbral = new umbral(_sodium);
+
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    const perpId = createName();
+    let userId = createName();
+    const randId: Uint8Array = hashId(perpId);
+    expect(() => _umbral.encryptData(randId, {perpId, userId}, [], userKeyPair.privateKey))
+                        .to.throw('No OC public key provided');
+
+  });
+
   it('Incorrect number of user public keys', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);

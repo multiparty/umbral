@@ -51,7 +51,7 @@ export class umbral {
     */
   public encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], skUser: Uint8Array): IEncryptedData[] {
     if (pkOCs.length < 1) {
-      return [];
+      throw new Error('No OC public key provided');
     }
 
     const slope: bigInt.BigInteger = bigInt(this.bytesToString(this.sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId)));
