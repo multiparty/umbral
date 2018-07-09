@@ -25,21 +25,20 @@ interface IShare {
   readonly eRecordKey: string;
 }
 
-export namespace umbral {
-  /* Uninitialized sodium instance */
-  let sodium = null;
+export class umbral {
+  private sodium = null;
 
-  const HEX: number = 16;
-  const PRIME: bigInt.BigInteger = bigInt(
+  private HEX: number = 16;
+  private PRIME: bigInt.BigInteger = bigInt(
     '115792089237316195423570985008687907853269984665640564039457584007913129639936',
   ).plus(bigInt(297));
 
   /**
    * Initializes sodium
-   * @param _sodium initialized sodium instance
+   * @param sodium initialized sodium instance
    */
-  export function init(_sodium): void {
-    sodium = _sodium;
+  constructor(sodium) {
+    this.sodium = sodium;
   }
 
    /**
@@ -50,22 +49,22 @@ export namespace umbral {
     * @param {Uint8Array} skUser - user's secret key
     * @returns {IEncryptedData[]} an array of records encrypted under each public key
     */
-  export function encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], skUser: Uint8Array): IEncryptedData[] {
+  public encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], skUser: Uint8Array): IEncryptedData[] {
     if (pkOCs.length < 1) {
       return [];
     }
 
-    const slope: bigInt.BigInteger = bigInt(bytesToString(sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId)));
-    const k: Uint8Array = sodium.crypto_kdf_derive_from_key(32, 2, "derivation", randId);
-    const matchingIndex: string = sodium.to_base64(sodium.crypto_kdf_derive_from_key(32, 3, "derivation", randId));
+    const slope: bigInt.BigInteger = bigInt(this.bytesToString(this.sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId)));
+    const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(32, 2, "derivation", randId);
+    const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(32, 3, "derivation", randId));
 
-    const U: bigInt.BigInteger = bigInt(sodium.to_hex(sodium.crypto_hash(record.userId).slice(0, 32)), HEX);
-    const kStr: string = bytesToString(k);
-    const s: bigInt.BigInteger = (slope.times(U).plus(bigInt(kStr))).mod(PRIME);
-    const recordKey: Uint8Array = sodium.crypto_secretbox_keygen();
+    const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(this.sodium.crypto_hash(record.userId).slice(0, 32)), this.HEX);
+    const kStr: string = this.bytesToString(k);
+    const s: bigInt.BigInteger = (slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
+    const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
 
-    const eRecord: string = symmetricEncrypt(recordKey, JSON.stringify(record));
-    const eRecordKey: string = symmetricEncrypt(k, sodium.to_base64(recordKey));
+    const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record));
+    const eRecordKey: string = this.symmetricEncrypt(k, this.sodium.to_base64(recordKey));
   
     const msg: IShare = { 
       x: U, 
@@ -75,7 +74,7 @@ export namespace umbral {
     let encryptedData: IEncryptedData[] = [];
 
     for (const i in pkOCs) {
-      let eOC = asymmetricEncrypt(JSON.stringify(msg), pkOCs[i], skUser);
+      let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i], skUser);
       encryptedData.push({matchingIndex, eOC, eRecord});
     }
 
@@ -87,8 +86,8 @@ export namespace umbral {
    * @param {bigInt.BigInteger} val - input value 
    * @returns {bigInt.BigInteger}
    */
-  function realMod(val: bigInt.BigInteger): bigInt.BigInteger {
-    return val.mod(PRIME).add(PRIME).mod(PRIME);
+  private realMod(val: bigInt.BigInteger): bigInt.BigInteger {
+    return val.mod(this.PRIME).add(this.PRIME).mod(this.PRIME);
   }
 
   /**
@@ -97,18 +96,18 @@ export namespace umbral {
    * @param {IShare} c2 - 2nd coordinate
    * @returns {bigInt.BigInteger} slope value
    */
-  function deriveSlope(c1: IShare, c2: IShare): bigInt.BigInteger {
-    const top: bigInt.BigInteger = realMod(c2.y.minus(c1.y));
-    const bottom: bigInt.BigInteger = realMod(c2.x.minus(c1.x));
+  private deriveSlope(c1: IShare, c2: IShare): bigInt.BigInteger {
+    const top: bigInt.BigInteger = this.realMod(c2.y.minus(c1.y));
+    const bottom: bigInt.BigInteger = this.realMod(c2.x.minus(c1.x));
 
-    return top.multiply(bottom.modInv(PRIME)).mod(PRIME);
+    return top.multiply(bottom.modInv(this.PRIME)).mod(this.PRIME);
   }
 
   /**
    * Checks that all entries have matching index
    * @param encryptedData 
    */
-  function checkMatches(encryptedData) {
+  private checkMatches(encryptedData) {
     if (encryptedData.length < 2) {
       throw new Error('Not enough matches');
     }
@@ -129,9 +128,9 @@ export namespace umbral {
    * @param {Uint8Array[]} pkUser - user's public key
    * @returns {IRecord[]} array of decrypted records from matched users
    */
-  export function decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkUsers: Uint8Array[]): IRecord[] {
+  public decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkUsers: Uint8Array[]): IRecord[] {
 
-    checkMatches(encryptedData);
+    this.checkMatches(encryptedData);
     if (encryptedData.length != pkUsers.length) {
       throw new Error('Number of matches does not equal number of public keys for users');
     }
@@ -139,13 +138,13 @@ export namespace umbral {
     let shares: IShare[] = [];
 
     for (let i in encryptedData) {
-      shares.push(asymmetricDecrypt(encryptedData[i], skOC, pkUsers[i]));
+      shares.push(this.asymmetricDecrypt(encryptedData[i], skOC, pkUsers[i]));
     }
   
-    const slope: bigInt.BigInteger = deriveSlope(shares[0], shares[1]);
-    const intercept: bigInt.BigInteger = getIntercept(shares[0], slope);
+    const slope: bigInt.BigInteger = this.deriveSlope(shares[0], shares[1]);
+    const intercept: bigInt.BigInteger = this.getIntercept(shares[0], slope);
 
-    const k: Uint8Array = stringToBytes(intercept.toString());
+    const k: Uint8Array = this.stringToBytes(intercept.toString());
 
     const records: string[] = [];
 
@@ -153,7 +152,7 @@ export namespace umbral {
       records.push(encryptedData[i].eRecord)
     }
  
-    const decryptedRecords: IRecord[] = decryptRecords(shares, records, k);
+    const decryptedRecords: IRecord[] = this.decryptRecords(shares, records, k);
 
     return decryptedRecords;
     
@@ -166,16 +165,16 @@ export namespace umbral {
    * @param {string} cipherText - in base 64 encoding with a nonce split on ("$")
    * @return {Uint8Array} decrypted data
    */
-  function symmetricDecrypt(key: Uint8Array, cipherText: string): Uint8Array {
+  private symmetricDecrypt(key: Uint8Array, cipherText: string): Uint8Array {
     const split: string[] = cipherText.split("$");
 
-    if (key.length !== sodium.crypto_box_SECRETKEYBYTES) {
+    if (key.length !== this.sodium.crypto_box_SECRETKEYBYTES) {
       return undefined;
     }
 
-    const cT: Uint8Array = sodium.from_base64(split[0]);
-    const nonce: Uint8Array = sodium.from_base64(split[1]);
-    const decrypted: Uint8Array = sodium.crypto_secretbox_open_easy(cT, nonce, key);
+    const cT: Uint8Array = this.sodium.from_base64(split[0]);
+    const nonce: Uint8Array = this.sodium.from_base64(split[1]);
+    const decrypted: Uint8Array = this.sodium.crypto_secretbox_open_easy(cT, nonce, key);
 
     return decrypted;
   }
@@ -187,13 +186,13 @@ export namespace umbral {
    * @param {Uint8Array} k - derived key from linear interpolation
    * @returns {IRecord[]} decrypted records
    */
-  function decryptRecords(data: IShare[], eRecords: string[], k: Uint8Array): IRecord[] {
+  private decryptRecords(data: IShare[], eRecords: string[], k: Uint8Array): IRecord[] {
 
     const decryptedRecords: IRecord[] = [];
 
     for (const i in data) {
-      const recordKey: Uint8Array = symmetricDecrypt(k, data[i].eRecordKey);
-      const decryptedRecord: Uint8Array = symmetricDecrypt(sodium.from_base64(recordKey), eRecords[i]);
+      const recordKey: Uint8Array = this.symmetricDecrypt(k, data[i].eRecordKey);
+      const decryptedRecord: Uint8Array = this.symmetricDecrypt(this.sodium.from_base64(recordKey), eRecords[i]);
       const dStr: string = new encoding.TextDecoder("utf-8").decode(decryptedRecord);
       decryptedRecords.push(JSON.parse(dStr));
     }
@@ -206,7 +205,7 @@ export namespace umbral {
    * @param str - string representation
    * @returns {Uint8Array}
    */
-  function stringToBytes(str: string): Uint8Array {
+  private stringToBytes(str: string): Uint8Array {
     let value: bigInt.BigInteger = bigInt(str);
     const result: number[] = [];
 
@@ -224,12 +223,12 @@ export namespace umbral {
    * @param {bigInt.BigInteger} slope 
    * @returns {bigInt.BigInteger} y-intercept
    */
-   function getIntercept(c1: IShare, slope: bigInt.BigInteger): bigInt.BigInteger {
+  private getIntercept(c1: IShare, slope: bigInt.BigInteger): bigInt.BigInteger {
     const x: bigInt.BigInteger = c1.x;
     const y: bigInt.BigInteger = c1.y;
     const mult: bigInt.BigInteger = (slope.times(x));
 
-    return realMod(y.minus(mult));
+    return this.realMod(y.minus(mult));
   }
 
   /**
@@ -239,12 +238,12 @@ export namespace umbral {
    * @param {Uint8Array} pkUser - public key of a user
    * @returns {IShare} a decrypted coordinate
    */
-  function asymmetricDecrypt(encryptedData: IEncryptedData, skOC: Uint8Array, pkUser: Uint8Array): IShare {
+  private asymmetricDecrypt(encryptedData: IEncryptedData, skOC: Uint8Array, pkUser: Uint8Array): IShare {
 
     const split: string[] = encryptedData.eOC.split("$");
-    const c: Uint8Array = sodium.from_base64(split[0]);
-    const nonce: Uint8Array = sodium.from_base64(split[1]);
-    const msg: Uint8Array = sodium.crypto_box_open_easy(c, nonce, pkUser, skOC);
+    const c: Uint8Array = this.sodium.from_base64(split[0]);
+    const nonce: Uint8Array = this.sodium.from_base64(split[1]);
+    const msg: Uint8Array = this.sodium.crypto_box_open_easy(c, nonce, pkUser, skOC);
     // todo: need type for msg obj
     const msgObj = JSON.parse(new encoding.TextDecoder("utf-8").decode(msg));
   
@@ -255,9 +254,6 @@ export namespace umbral {
     };
   }
 
-
-
-
   /**
    * Asymmetric encryption
    * @param {string} message - a plaintext string
@@ -265,12 +261,12 @@ export namespace umbral {
    * @param {Uint8Array} skUser - secret key of a user
    * @returns {string} encrypted string in base 64 encoding 
    */
-  function asymmetricEncrypt(message: string, pkOC: Uint8Array, skUser: Uint8Array): string {
+  private asymmetricEncrypt(message: string, pkOC: Uint8Array, skUser: Uint8Array): string {
 
-    const nonce: Uint8Array = sodium.randombytes_buf(sodium.crypto_box_NONCEBYTES);
-    const cY: Uint8Array = sodium.crypto_box_easy(
+    const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
+    const cY: Uint8Array = this.sodium.crypto_box_easy(
       message, nonce, pkOC, skUser);
-    const encrypted: string = sodium.to_base64(cY) + "$" + sodium.to_base64(nonce);
+    const encrypted: string = this.sodium.to_base64(cY) + "$" + this.sodium.to_base64(nonce);
 
     return encrypted;
   }
@@ -281,10 +277,10 @@ export namespace umbral {
    * @param {string} msg plaintext string
    * @returns {string} encrypted string in base 64 encoding
    */
-  function symmetricEncrypt(key: Uint8Array, msg: string): string {
-    const nonce: Uint8Array = sodium.randombytes_buf(sodium.crypto_box_NONCEBYTES);
-    const cT: Uint8Array = sodium.crypto_secretbox_easy(msg, nonce, key);
-    const encrypted: string = sodium.to_base64(cT) + "$" + sodium.to_base64(nonce);
+  private symmetricEncrypt(key: Uint8Array, msg: string): string {
+    const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
+    const cT: Uint8Array = this.sodium.crypto_secretbox_easy(msg, nonce, key);
+    const encrypted: string = this.sodium.to_base64(cT) + "$" + this.sodium.to_base64(nonce);
 
     return encrypted;
   }
@@ -294,7 +290,7 @@ export namespace umbral {
    * @param {Uint8Array} bytes 
    * @returns {string}
    */
-  function bytesToString(bytes: Uint8Array): string {
+  private bytesToString(bytes: Uint8Array): string {
     let result: bigInt.BigInteger = bigInt(0);
 
     for (let i: number = bytes.length - 1; i >= 0; i--) {
