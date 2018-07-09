@@ -43,7 +43,7 @@ export class umbral {
 
    /**
     * Encrypts a user's record
-    * @param {Uint8Array} randId - random ID
+    * @param {Uint8Array} randId - random ID (pHat)
     * @param {IRecord} record - user record
     * @param {Uint8Array[]} pkOCs - options counselor public keys
     * @param {Uint8Array} skUser - user's secret key
@@ -118,7 +118,6 @@ export class umbral {
         throw new Error('Incorrect match found');
       }
     }
-
   }
 
   /**

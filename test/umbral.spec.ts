@@ -186,10 +186,10 @@ describe('End-to-end tests', () => {
 });
 
 describe('Error cases', () => {
-  it('basic example', async function() {
+  it('Incorrect number of user public keys', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
-    
+
     const ocKeyPair = _sodium.crypto_box_keypair();
     const userKeyPair = _sodium.crypto_box_keypair();
 
@@ -201,8 +201,26 @@ describe('Error cases', () => {
     userId = userId + userId;
     const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
   
-    expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey])).to.throw('Number of matches does not equal number of public keys for users')
+    expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey]))
+                        .to.throw('Number of matches does not equal number of public keys for users');
   });
+
+  it('Too few matches provided', async function() {
+    await _sodium.ready;
+    const _umbral = new umbral(_sodium);
+
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    const perpId = createName();
+    let userId = createName();
+    const randId: Uint8Array = hashId(perpId);
+
+    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    
+    expect(() => _umbral.decryptData([encryptedDataA[0]], ocKeyPair.privateKey, [userKeyPair.publicKey]))
+                        .to.throw('Not enough matches');
+  }); 
 });
 
 // TODO: write test case for more than 2 users submitting same perp name
