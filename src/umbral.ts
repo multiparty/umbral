@@ -113,8 +113,9 @@ export class umbral {
     }
 
     var m = encryptedData[0].matchingIndex;
-    for (var i = 0; i < encryptedData.length; i++) {
-      if (m != encryptedData[0].matchingIndex) {
+    
+    for (var i = 1; i < encryptedData.length; i++) {
+      if (m != encryptedData[i].matchingIndex) {
         throw new Error('Incorrect match found');
       }
     }

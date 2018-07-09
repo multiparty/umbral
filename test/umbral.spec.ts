@@ -221,6 +221,27 @@ describe('Error cases', () => {
     expect(() => _umbral.decryptData([encryptedDataA[0]], ocKeyPair.privateKey, [userKeyPair.publicKey]))
                         .to.throw('Not enough matches');
   }); 
+
+  it('Incorrect number of user public keys', async function() {
+    await _sodium.ready;
+    const _umbral = new umbral(_sodium);
+
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    const perpId = createName();
+    let userId = createName();
+    const randIdA: Uint8Array = hashId(perpId);
+    const randIdB: Uint8Array = hashId(perpId + perpId);
+
+
+    const encryptedDataA = _umbral.encryptData(randIdA, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    userId = userId + userId;
+    const encryptedDataB = _umbral.encryptData(randIdB, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+  
+    expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]))
+                        .to.throw('Incorrect match found');
+  });
 });
 
 // TODO: write test case for more than 2 users submitting same perp name
