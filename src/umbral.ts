@@ -2,21 +2,14 @@ import bigInt = require('big-integer')
 import * as encoding from 'text-encoding';
 
 export interface IRecord {
-  readonly perpId: string;
+  readonly perpId: string; 
   readonly userId: string;
 }
 
 export interface IEncryptedData {
-  readonly matchingIndex: string;
-  readonly eOC: string;
+  readonly matchingIndex: string; // pi
+  readonly eOC: string; // c
   readonly eRecord: string;
-}
-
-export interface IDecryptedData {
-  readonly decryptedRecords: object;
-  readonly slope: bigInt.BigInteger;
-  readonly intercept: bigInt.BigInteger;
-  readonly k: Uint8Array;
 }
 
 interface IShare {
