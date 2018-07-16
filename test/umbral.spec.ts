@@ -3,10 +3,6 @@ import { expect } from 'chai';
 import { OPRF, IMaskedData } from 'oprf';
 var _sodium = require('libsodium-wrappers-sumo');
 
-function hashId(id: string): Uint8Array {
-  return (_sodium.crypto_hash(id)).slice(0, 32);
-}
-
 function getRandom(max: number): number {
   return Math.floor(Math.random() * Math.floor(max));
 }
@@ -48,7 +44,7 @@ describe('End-to-end tests', () => {
 
     const perpId = createName();
     let userId = createName();
-    const randId: Uint8Array = hashId(perpId);
+    const randId: Uint8Array = performOPRF(perpId);
 
     const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     userId = userId + userId;
@@ -86,7 +82,7 @@ describe('End-to-end tests', () => {
 
     const perpId = createName();
     let userId = createName();
-    const randId: Uint8Array = hashId(perpId);
+    const randId: Uint8Array = performOPRF(perpId);
 
     const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairA.privateKey);    
     userId = userId + userId;
@@ -140,7 +136,7 @@ describe('End-to-end tests', () => {
     const userKeyPair = _sodium.crypto_box_keypair();
 
     const perpId: string = createName();
-    const randId: Uint8Array = hashId(perpId);
+    const randId: Uint8Array = performOPRF(perpId);
     let userId: string = createName();
 
     const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
@@ -167,7 +163,7 @@ describe('End-to-end tests', () => {
 
     for (var i = 0; i < perpIds.length; i++) {
       let perpId = perpIds[i];
-      const randId: Uint8Array = hashId(perpId);
+      const randId: Uint8Array = performOPRF(perpId);
       
       const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
       userId = userId + userId;
@@ -198,7 +194,7 @@ describe('End-to-end tests', () => {
     for (var i = 0; i < ocNum; i++) {
 
       let perpId: string = createName()
-      const randId: Uint8Array = hashId(perpId);
+      const randId: Uint8Array = performOPRF(perpId);
       let userId: string = createName();
 
       let encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
@@ -223,7 +219,7 @@ describe('Error cases', () => {
 
     const perpId = createName();
     let userId = createName();
-    const randId: Uint8Array = hashId(perpId);
+    const randId: Uint8Array = performOPRF(perpId);
     expect(() => _umbral.encryptData(randId, {perpId, userId}, [], userKeyPair.privateKey))
                         .to.throw('No OC public key provided');
 
@@ -238,7 +234,7 @@ describe('Error cases', () => {
 
     const perpId = createName();
     let userId = createName();
-    const randId: Uint8Array = hashId(perpId);
+    const randId: Uint8Array = performOPRF(perpId);
 
     const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     userId = userId + userId;
@@ -257,7 +253,7 @@ describe('Error cases', () => {
 
     const perpId = createName();
     let userId = createName();
-    const randId: Uint8Array = hashId(perpId);
+    const randId: Uint8Array = performOPRF(perpId);
 
     const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     
@@ -274,8 +270,8 @@ describe('Error cases', () => {
 
     const perpId = createName();
     let userId = createName();
-    const randIdA: Uint8Array = hashId(perpId);
-    const randIdB: Uint8Array = hashId(perpId + perpId);
+    const randIdA: Uint8Array = performOPRF(perpId);
+    const randIdB: Uint8Array = performOPRF(perpId + perpId);
 
 
     const encryptedDataA = _umbral.encryptData(randIdA, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
