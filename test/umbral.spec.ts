@@ -101,7 +101,7 @@ describe('End-to-end tests', () => {
     const ocKeyPair = _sodium.crypto_box_keypair();
     const userKeyPair = _sodium.crypto_box_keypair();
 
-    const testNum: number = 100;
+    const testNum: number = 10;
     for (let i: number = 0; i < testNum; i++) {
       const perpId: string = createName();
       const randId: Uint8Array = performOPRF(perpId);
