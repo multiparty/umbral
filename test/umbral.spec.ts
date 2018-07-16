@@ -1,7 +1,7 @@
 import { umbral } from '../src/umbral';
 import { expect } from 'chai';
-import { OPRF } from 'oprf';
-var _sodium = require('libsodium-wrappers');
+import { OPRF, IMaskedData } from 'oprf';
+var _sodium = require('libsodium-wrappers-sumo');
 
 function hashId(id: string): Uint8Array {
   return (_sodium.crypto_hash(id)).slice(0, 32);
@@ -27,6 +27,16 @@ function createName(): string {
   return name;
 }
 
+function performOPRF(input: string): Uint8Array {
+  const oprf = new OPRF(_sodium);
+  const sk = oprf.generateRandomScalar();
+  const masked: IMaskedData = oprf.maskInput(input);
+  const salted: number[] = oprf.saltInput(masked.point, sk);
+  const unmasked = oprf.unmaskInput(salted, masked.mask);
+
+  return new Uint8Array(unmasked);
+}
+
 describe('End-to-end tests', () => {
   
   it('basic example', async function() {
@@ -47,23 +57,22 @@ describe('End-to-end tests', () => {
     expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
   });
 
-  it('basic example', async function() {
+  it('basic example using OPRF', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
-    const oprf = new OPRF(_sodium);
 
     const ocKeyPair = _sodium.crypto_box_keypair();
     const userKeyPair = _sodium.crypto_box_keypair();
 
     const perpId = createName();
     let userId = createName();
-    const randId: Uint8Array = hashId(perpId);
+    const randId = performOPRF(perpId);
 
     const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     userId = userId + userId;
     const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     const decryptedRecords = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]);
-    // expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
+    expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
   });
 
   it('basic example with 3 matches', async function() {
