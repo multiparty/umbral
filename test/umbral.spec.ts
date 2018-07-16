@@ -108,7 +108,7 @@ describe('End-to-end tests', () => {
     const testNum: number = 100;
     for (let i: number = 0; i < testNum; i++) {
       const perpId: string = createName();
-      const randId: Uint8Array = hashId(perpId);
+      const randId: Uint8Array = performOPRF(perpId);
       let userId: string = createName();
 
       const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
