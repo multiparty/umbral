@@ -9,8 +9,9 @@ export interface IRecord {
 export interface IEncryptedData {
   readonly matchingIndex: string; // pi
   readonly eOC: string; // c
-  readonly eRecord: string;
   readonly eUser: string; // c'user
+  eRecord: string;
+
 }
 
 interface IShare {
@@ -119,14 +120,46 @@ export class umbral {
   }
 
   /**
-   * 
-   * @param userPassPhrase 
-   * @param {IEncryptedData} userEncryptedData - an array of a user's encrypted data under the pk of each OC
+   * Decrypts a user's record for editing purposes 
+   * @param {Uint8Array} userPassPhrase - original passphrase used to encrypt the record key
+   * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
+   * @returns {IRecord[]} an array of decrypted records (should contain same content)
    */
-  public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]) {
-        
+  public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]): IRecord[] {
 
+    // NOTE: is it necessary to do this for ALL oc keys?
+    const decryptedRecords: IRecord[] = [];
+
+    for (let i in userEncryptedData) {
+      const eUser = userEncryptedData[i].eUser;
+
+      const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser);
+      decryptedRecords.push(this.decryptRecord(recordKey, userEncryptedData[i].eRecord));
+    }
+
+    return decryptedRecords;
   }
+
+  /**
+   * 
+   * @param {Uint8Array} userPassPhrase - original passphrase used to encrypt the record key
+   * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
+   * @param {IRecord} updatedRecord - a user's updated record
+   * @returns {IEncryptedData[]} an array of encrypted data containing the cipher text of the updated record
+   */
+  public updateUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[], updatedRecord: IRecord): IEncryptedData[] {
+
+    for (let i in userEncryptedData) {
+
+      const eUser = userEncryptedData[i].eUser;
+      const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser);
+      const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(updatedRecord));
+
+      userEncryptedData[i].eRecord = eRecord;
+    }
+    return userEncryptedData;
+  }
+ 
 
   /**
    * Decrypts an array of encrypted data
@@ -189,6 +222,18 @@ export class umbral {
   }
 
   /**
+   * Decrypts a single record
+   * @param recordKey 
+   * @param eRecord 
+   * @returns {IRecord}
+   */
+  private decryptRecord(recordKey, eRecord): IRecord {
+    const decryptedRecord: Uint8Array = this.symmetricDecrypt(this.sodium.from_base64(recordKey), eRecord);
+    const dStr: string = new encoding.TextDecoder("utf-8").decode(decryptedRecord);
+    return JSON.parse(dStr);
+  }
+
+  /**
    * Decrypt all records
    * @param {IShare[]} data - coordinates
    * @param {string[]} eRecords - encrypted records
@@ -200,10 +245,7 @@ export class umbral {
     const decryptedRecords: IRecord[] = [];
 
     for (const i in data) {
-      const recordKey: Uint8Array = this.symmetricDecrypt(k, data[i].eRecordKey);
-      const decryptedRecord: Uint8Array = this.symmetricDecrypt(this.sodium.from_base64(recordKey), eRecords[i]);
-      const dStr: string = new encoding.TextDecoder("utf-8").decode(decryptedRecord);
-      decryptedRecords.push(JSON.parse(dStr));
+      decryptedRecords.push(this.decryptRecord(k, eRecords[i]));
     }
     return decryptedRecords;
   }
