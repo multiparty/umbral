@@ -1,8 +1,8 @@
 {
   "name": "umbral",
-  "version": "1.0.2",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "version": "1.0.3",
+  "main": "dist/umbral.js",
+  "types": "dist/umbral.d.ts",
   "scripts": {
     "test": "mocha -r ts-node/register test/umbral.spec.ts"
   },
