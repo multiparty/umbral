@@ -134,7 +134,7 @@ export class umbral {
       const eUser = userEncryptedData[i].eUser;
 
       const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser);
-      decryptedRecords.push(this.decryptRecord(recordKey, userEncryptedData[i].eRecord));
+      decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), userEncryptedData[i].eRecord));
     }
 
     return decryptedRecords;
@@ -188,13 +188,13 @@ export class umbral {
 
     const k: Uint8Array = this.stringToBytes(intercept.toString());
 
-    const records: string[] = [];
+    let decryptedRecords: IRecord[] = [];
 
-    for (let i = 0; i < encryptedData.length; i++) {
-      records.push(encryptedData[i].eRecord)
+    for (const i in encryptedData) {
+
+      const recordKey: Uint8Array = this.symmetricDecrypt(k, shares[i].eRecordKey);
+      decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedData[i].eRecord));
     }
- 
-    const decryptedRecords: IRecord[] = this.decryptRecords(shares, records, k);
 
     return decryptedRecords;
     
@@ -223,33 +223,15 @@ export class umbral {
 
   /**
    * Decrypts a single record
-   * @param recordKey 
-   * @param eRecord 
-   * @returns {IRecord}
+   * @param {Uint8Array} recordKey 
+   * @param {string} eRecord 
+   * @returns {IRecord} decrypted record
    */
-  private decryptRecord(recordKey, eRecord): IRecord {
-    const decryptedRecord: Uint8Array = this.symmetricDecrypt(this.sodium.from_base64(recordKey), eRecord);
+  private decryptRecord(recordKey: Uint8Array, eRecord): IRecord {
+    const decryptedRecord: Uint8Array = this.symmetricDecrypt(recordKey, eRecord);
     const dStr: string = new encoding.TextDecoder("utf-8").decode(decryptedRecord);
     return JSON.parse(dStr);
   }
-
-  /**
-   * Decrypt all records
-   * @param {IShare[]} data - coordinates
-   * @param {string[]} eRecords - encrypted records
-   * @param {Uint8Array} k - derived key from linear interpolation
-   * @returns {IRecord[]} decrypted records
-   */
-  private decryptRecords(data: IShare[], eRecords: string[], k: Uint8Array): IRecord[] {
-
-    const decryptedRecords: IRecord[] = [];
-
-    for (const i in data) {
-      decryptedRecords.push(this.decryptRecord(k, eRecords[i]));
-    }
-    return decryptedRecords;
-  }
-
 
   /**
    * Converts a string representation of a number to a Uint8Array of bytes
