@@ -10,6 +10,7 @@ export interface IEncryptedData {
   readonly matchingIndex: string; // pi
   readonly eOC: string; // c
   readonly eRecord: string;
+  readonly eUser: string; // c'user
 }
 
 interface IShare {
@@ -42,11 +43,12 @@ export class umbral {
     * @param {Uint8Array} skUser - user's secret key
     * @returns {IEncryptedData[]} an array of records encrypted under each public key
     */
-  public encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], skUser: Uint8Array): IEncryptedData[] {
+  public encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], skUser: Uint8Array, userPassPhrase: Uint8Array): IEncryptedData[] {
     if (pkOCs.length < 1) {
       throw new Error('No OC public key provided');
     }
 
+    // TODO: derive slope from key??
     const slope: bigInt.BigInteger = bigInt(this.bytesToString(this.sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId)));
     const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(32, 2, "derivation", randId);
     const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(32, 3, "derivation", randId));
@@ -56,9 +58,11 @@ export class umbral {
     const s: bigInt.BigInteger = (slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
     const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
 
+
     const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record));
     const eRecordKey: string = this.symmetricEncrypt(k, this.sodium.to_base64(recordKey));
-  
+    const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(eRecordKey));
+    
     const msg: IShare = { 
       x: U, 
       y: s, 
@@ -68,7 +72,7 @@ export class umbral {
 
     for (const i in pkOCs) {
       let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i], skUser);
-      encryptedData.push({matchingIndex, eOC, eRecord});
+      encryptedData.push({matchingIndex, eOC, eRecord, eUser});
     }
 
     return encryptedData;
@@ -115,6 +119,16 @@ export class umbral {
   }
 
   /**
+   * 
+   * @param userPassPhrase 
+   * @param {IEncryptedData} userEncryptedData - an array of a user's encrypted data under the pk of each OC
+   */
+  public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]) {
+        
+
+  }
+
+  /**
    * Decrypts an array of encrypted data
    * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
    * @param {Uint8Array} skOC - secret key of an options counselor
@@ -133,7 +147,9 @@ export class umbral {
     for (let i in encryptedData) {
       shares.push(this.asymmetricDecrypt(encryptedData[i], skOC, pkUsers[i]));
     }
-  
+   // TODO: test all pairs?
+   // ignore ciphertexts that fail to decrypt 
+   // check share[i] with every other index, decrypt record[i] with each key (once one succeeds, answer is correct, stop.) 
     const slope: bigInt.BigInteger = this.deriveSlope(shares[0], shares[1]);
     const intercept: bigInt.BigInteger = this.getIntercept(shares[0], slope);
 
