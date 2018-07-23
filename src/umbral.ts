@@ -20,6 +20,12 @@ interface IShare {
   readonly eRecordKey: string;
 }
 
+interface IDerivedValues {
+  readonly slope: bigInt.BigInteger;
+  readonly k: Uint8Array;
+  readonly matchingIndex: string
+}
+
 export class umbral {
   private sodium = null;
 
@@ -36,6 +42,23 @@ export class umbral {
     this.sodium = sodium;
   }
 
+  private deriveValues(randId: Uint8Array): IDerivedValues {
+    // TODO: derive slope from key??
+
+    try {
+      const slope: bigInt.BigInteger = bigInt(this.bytesToString(this.sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId)));
+      const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(32, 2, "derivation", randId);
+      const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(32, 3, "derivation", randId));
+
+      return {
+        slope, k, matchingIndex
+      }  
+    } catch(e) {
+      throw e;
+    }
+
+  }
+
    /**
     * Encrypts a user's record
     * @param {Uint8Array} randId - random ID (pHat)
@@ -49,19 +72,17 @@ export class umbral {
       throw new Error('No OC public key provided');
     }
 
-    // TODO: derive slope from key??
-    const slope: bigInt.BigInteger = bigInt(this.bytesToString(this.sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId)));
-    const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(32, 2, "derivation", randId);
-    const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(32, 3, "derivation", randId));
+    const derived: IDerivedValues = this.deriveValues(randId);
 
+    // TODO: make sure U is 32 bytes (use different function?)
     const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(this.sodium.crypto_hash(record.userId).slice(0, 32)), this.HEX);
-    const kStr: string = this.bytesToString(k);
-    const s: bigInt.BigInteger = (slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
+    const kStr: string = this.bytesToString(derived.k);
+    const s: bigInt.BigInteger = (derived.slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
     const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
 
 
     const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record));
-    const eRecordKey: string = this.symmetricEncrypt(k, this.sodium.to_base64(recordKey));
+    const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey));
     const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(eRecordKey));
     
     const msg: IShare = { 
@@ -73,7 +94,7 @@ export class umbral {
 
     for (const i in pkOCs) {
       let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i], skUser);
-      encryptedData.push({matchingIndex, eOC, eRecord, eUser});
+      encryptedData.push({matchingIndex: derived.matchingIndex, eOC, eRecord, eUser});
     }
 
     return encryptedData;
