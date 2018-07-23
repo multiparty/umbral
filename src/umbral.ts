@@ -208,17 +208,21 @@ export class umbral {
    * @return {Uint8Array} decrypted data
    */
   private symmetricDecrypt(key: Uint8Array, cipherText: string): Uint8Array {
-    const split: string[] = cipherText.split("$");
+    try {
+      const split: string[] = cipherText.split("$");
 
-    if (key.length !== this.sodium.crypto_box_SECRETKEYBYTES) {
-      return undefined;
+      if (key.length !== this.sodium.crypto_box_SECRETKEYBYTES) {
+        throw new Error('Improper key length for symmetric decryption');
+      }
+  
+      const cT: Uint8Array = this.sodium.from_base64(split[0]);
+      const nonce: Uint8Array = this.sodium.from_base64(split[1]);
+      const decrypted: Uint8Array = this.sodium.crypto_secretbox_open_easy(cT, nonce, key);
+  
+      return decrypted;
+    } catch (e) {
+      throw e;
     }
-
-    const cT: Uint8Array = this.sodium.from_base64(split[0]);
-    const nonce: Uint8Array = this.sodium.from_base64(split[1]);
-    const decrypted: Uint8Array = this.sodium.crypto_secretbox_open_easy(cT, nonce, key);
-
-    return decrypted;
   }
 
   /**
@@ -273,18 +277,21 @@ export class umbral {
    */
   private asymmetricDecrypt(encryptedData: IEncryptedData, skOC: Uint8Array, pkUser: Uint8Array): IShare {
 
-    const split: string[] = encryptedData.eOC.split("$");
-    const c: Uint8Array = this.sodium.from_base64(split[0]);
-    const nonce: Uint8Array = this.sodium.from_base64(split[1]);
-    const msg: Uint8Array = this.sodium.crypto_box_open_easy(c, nonce, pkUser, skOC);
-    // todo: need type for msg obj
-    const msgObj = JSON.parse(new encoding.TextDecoder("utf-8").decode(msg));
-  
-    return {
-      x: bigInt(msgObj.x),
-      y: bigInt(msgObj.y),
-      eRecordKey: msgObj.eRecordKey
-    };
+    try {
+      const split: string[] = encryptedData.eOC.split("$");
+      const c: Uint8Array = this.sodium.from_base64(split[0]);
+      const nonce: Uint8Array = this.sodium.from_base64(split[1]);
+      const msg: Uint8Array = this.sodium.crypto_box_open_easy(c, nonce, pkUser, skOC);
+      const msgObj: IShare = JSON.parse(new encoding.TextDecoder("utf-8").decode(msg));  
+      
+      return {
+        x: bigInt(msgObj.x),
+        y: bigInt(msgObj.y),
+        eRecordKey: msgObj.eRecordKey
+      };
+    } catch(e) {
+      throw e;
+    }
   }
 
   /**
@@ -296,12 +303,16 @@ export class umbral {
    */
   private asymmetricEncrypt(message: string, pkOC: Uint8Array, skUser: Uint8Array): string {
 
-    const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
-    const cY: Uint8Array = this.sodium.crypto_box_easy(
-      message, nonce, pkOC, skUser);
-    const encrypted: string = this.sodium.to_base64(cY) + "$" + this.sodium.to_base64(nonce);
-
-    return encrypted;
+    try {
+      const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
+      const cY: Uint8Array = this.sodium.crypto_box_easy(
+        message, nonce, pkOC, skUser);
+      const encrypted: string = this.sodium.to_base64(cY) + "$" + this.sodium.to_base64(nonce);
+      
+      return encrypted;
+    } catch(e) {
+      throw(e);
+    }
   }
 
   /**
@@ -311,11 +322,15 @@ export class umbral {
    * @returns {string} encrypted string in base 64 encoding
    */
   private symmetricEncrypt(key: Uint8Array, msg: string): string {
-    const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
-    const cT: Uint8Array = this.sodium.crypto_secretbox_easy(msg, nonce, key);
-    const encrypted: string = this.sodium.to_base64(cT) + "$" + this.sodium.to_base64(nonce);
+    try {
+      const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
+      const cT: Uint8Array = this.sodium.crypto_secretbox_easy(msg, nonce, key);
+      const encrypted: string = this.sodium.to_base64(cT) + "$" + this.sodium.to_base64(nonce);
 
-    return encrypted;
+      return encrypted;
+    } catch(e) {
+      throw e;
+    }
   }
 
   /**

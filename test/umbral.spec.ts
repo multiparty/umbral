@@ -263,4 +263,29 @@ describe('Error cases', () => {
     expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]))
                         .to.throw('Incorrect match found');
   });
+
+  it('Asymmetric key decryption failure', async function() {
+
+    await _sodium.ready;
+    const _umbral = new umbral(_sodium);
+
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    const perpId = createName();
+    let userId = createName();
+    const randId: Uint8Array = performOPRF(perpId);
+
+    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
+    userId = userId + userId;
+    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
+    expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [ocKeyPair.publicKey, ocKeyPair.publicKey])).to.throw('incorrect key pair for the given ciphertext')
+
+
+    // expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
+    
+    // _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [ocKeyPair.publicKey])
+    // expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]))
+    //                     .to.throw('Incorrect match found');
+  });
 });
