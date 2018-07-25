@@ -296,4 +296,11 @@ describe('Error cases', () => {
     // expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]))
     //                     .to.throw('Incorrect match found');
   });
+
+
+  /**
+   * TODO:
+   * -Decryption succeeds but authentication of matching index fails
+   * -User edits record
+   */
 });

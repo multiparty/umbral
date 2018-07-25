@@ -90,10 +90,10 @@ export class umbral {
     const s: bigInt.BigInteger = (derived.slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
     const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
 
-
-    const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record));
-    const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey));
-    const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(eRecordKey));
+    // TODO: should we authenticate data w/ eRecord?
+    const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), null);
+    const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey), derived.matchingIndex);
+    const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(eRecordKey), derived.matchingIndex);
     
     const msg: IShare = { 
       x: U, 
@@ -164,7 +164,7 @@ export class umbral {
     for (let i in userEncryptedData) {
       const eUser = userEncryptedData[i].eUser;
 
-      const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser);
+      const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser, null);
       decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), userEncryptedData[i].eRecord));
     }
 
@@ -183,8 +183,8 @@ export class umbral {
     for (let i in userEncryptedData) {
 
       const eUser = userEncryptedData[i].eUser;
-      const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser);
-      const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(updatedRecord));
+      const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser, userEncryptedData[i].matchingIndex);
+      const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(updatedRecord), null);
 
       userEncryptedData[i].eRecord = eRecord;
     }
@@ -223,7 +223,7 @@ export class umbral {
 
     for (const i in encryptedData) {
 
-      const recordKey: Uint8Array = this.symmetricDecrypt(k, shares[i].eRecordKey);
+      const recordKey: Uint8Array = this.symmetricDecrypt(k, shares[i].eRecordKey, encryptedData[i].matchingIndex);
       decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedData[i].eRecord));
     }
 
@@ -238,7 +238,7 @@ export class umbral {
    * @param {string} cipherText - in base 64 encoding with a nonce split on ("$")
    * @return {Uint8Array} decrypted data
    */
-  private symmetricDecrypt(key: Uint8Array, cipherText: string): Uint8Array {
+  private symmetricDecrypt(key: Uint8Array, cipherText: string, ad: string): Uint8Array {
     try {
       const split: string[] = cipherText.split("$");
 
@@ -248,7 +248,10 @@ export class umbral {
   
       const cT: Uint8Array = this.sodium.from_base64(split[0]);
       const nonce: Uint8Array = this.sodium.from_base64(split[1]);
-      const decrypted: Uint8Array = this.sodium.crypto_secretbox_open_easy(cT, nonce, key);
+
+      const decrypted: Uint8Array = this.sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, cT, ad, nonce, key);
+
+      // const decrypted: Uint8Array = this.sodium.crypto_secretbox_open_easy(cT, nonce, key);
   
       return decrypted;
     } catch (e) {
@@ -263,7 +266,7 @@ export class umbral {
    * @returns {IRecord} decrypted record
    */
   private decryptRecord(recordKey: Uint8Array, eRecord): IRecord {
-    const decryptedRecord: Uint8Array = this.symmetricDecrypt(recordKey, eRecord);
+    const decryptedRecord: Uint8Array = this.symmetricDecrypt(recordKey, eRecord, null);
     const dStr: string = new encoding.TextDecoder("utf-8").decode(decryptedRecord);
     return JSON.parse(dStr);
   }
@@ -352,10 +355,18 @@ export class umbral {
    * @param {string} msg plaintext string
    * @returns {string} encrypted string in base 64 encoding
    */
-  private symmetricEncrypt(key: Uint8Array, msg: string): string {
+  private symmetricEncrypt(key: Uint8Array, msg: string, ad: string): string {
     try {
       const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
-      const cT: Uint8Array = this.sodium.crypto_secretbox_easy(msg, nonce, key);
+
+      // TODO: double check that args are in correct order
+      const cT: Uint8Array = this.sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(msg, ad, null, nonce, key);
+
+ 
+
+      // const cT: Uint8Array = this.sodium.crypto_secretbox_easy(msg, nonce, key);
+
+
       const encrypted: string = this.sodium.to_base64(cT) + "$" + this.sodium.to_base64(nonce);
 
       return encrypted;
