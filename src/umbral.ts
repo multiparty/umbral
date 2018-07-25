@@ -42,14 +42,24 @@ export class umbral {
     this.sodium = sodium;
   }
 
+  private concatArrays(a: Uint8Array, b: Uint8Array): Uint8Array {
+    let concat: number[] = [];
+    for (var i = 0; i < a.length; i++) {
+      concat.push((a[i] + b[i]) % 255);
+    }
+
+    return new Uint8Array(concat);
+  }
+
   private deriveValues(randId: Uint8Array): IDerivedValues {
     // TODO: derive slope from key??
 
     try {
-      const slope: bigInt.BigInteger = bigInt(this.bytesToString(this.sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId)));
+      const a: Uint8Array = this.sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId);
       const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(32, 2, "derivation", randId);
-      const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(32, 3, "derivation", randId));
-
+      const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(32, 3, "derivation", this.concatArrays(a, k)));
+      
+      const slope: bigInt.BigInteger = bigInt(this.bytesToString(a));
       return {
         slope, k, matchingIndex
       }  

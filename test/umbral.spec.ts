@@ -23,6 +23,8 @@ function createName(): string {
   return name;
 }
 
+// TODO: perform 2 OPRF's and mimic 2 servers
+
 function performOPRF(input: string): Uint8Array {
   const oprf = new OPRF(_sodium);
   const sk = oprf.generateRandomScalar();
@@ -35,7 +37,7 @@ function performOPRF(input: string): Uint8Array {
 
 describe('End-to-end tests', () => {
   
-  it('basic example', async function() {
+  it('basic example with 1 OC, 2 matched users', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
 
@@ -45,6 +47,9 @@ describe('End-to-end tests', () => {
     const perpId = createName();
     let userId = createName();
     const randId: Uint8Array = performOPRF(perpId);
+
+    // note: cryptobox_open: toss secret key at end of session and annotate public key
+    // use seal instead? would not be able to verify identity of user (but can do this through account info/decrypted record) 
 
     const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
     userId = userId + userId;
@@ -125,7 +130,10 @@ describe('End-to-end tests', () => {
     userId = userId + userId;
     const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey, userKeyPair.privateKey);
 
+    // note: highlight data structure necessary to make this work
+    // callisto database to send entire vector of encrypted data entries or just the entries for a particular OC?
 
+    // question: what is being fetched by an OC? 
     for (var i = 0; i < ocNum; i++) {
       const decryptedRecords = _umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], [userKeyPair.publicKey, userKeyPair.publicKey]);
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
