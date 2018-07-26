@@ -34,6 +34,9 @@ export class umbral {
   ).plus(bigInt(297));
 
   private KEY_BYTES: number = 32;
+  private RECORD_STRING: string = 'record';
+  private RECORD_KEY_STRING: string = 'record key';
+  private USER_EDIT_STRING: string = 'user edit';
 
   /**
    * Initializes sodium
@@ -81,8 +84,8 @@ export class umbral {
     const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
 
     // TODO: change AD to fixed string concatenated with pi. *make sure they are different so they can't be swapped
-    const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey), 'some string' + derived.matchingIndex);
-    const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(recordKey), 'diff string' + derived.matchingIndex);
+    const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey), this.RECORD_KEY_STRING + derived.matchingIndex);
+    const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(recordKey), this.USER_EDIT_STRING + derived.matchingIndex);
     
     const msg: IShare = { 
       x: U, 
@@ -92,7 +95,7 @@ export class umbral {
     let encryptedData: IEncryptedData[] = [];
 
     // TODO: change fixed string to something sensible
-    const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), 'other string' + derived.matchingIndex);
+    const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), this.RECORD_STRING + derived.matchingIndex);
 
     for (const i in pkOCs) {
       let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i], skUser);
@@ -157,7 +160,7 @@ export class umbral {
       const eUser = userEncryptedData[i].eUser;
 
       const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser, null);
-      decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), userEncryptedData[i].eRecord));
+      decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), userEncryptedData[i].eRecord, this.RECORD_STRING + userEncryptedData[i].matchingIndex));
     }
 
     return decryptedRecords;
@@ -175,8 +178,8 @@ export class umbral {
     for (let i in userEncryptedData) {
 
       const eUser = userEncryptedData[i].eUser;
-      const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser, userEncryptedData[i].matchingIndex);
-      const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(updatedRecord), null);
+      const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser, this.USER_EDIT_STRING + userEncryptedData[i].matchingIndex);
+      const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(updatedRecord), this.RECORD_STRING + userEncryptedData[i].matchingIndex);
 
       userEncryptedData[i].eRecord = eRecord;
     }
@@ -220,12 +223,12 @@ export class umbral {
 
     for (const i in encryptedData) {
       try {
-
-
-      const recordKey: Uint8Array = this.symmetricDecrypt(k, shares[i].eRecordKey, encryptedData[i].matchingIndex);
-      decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedData[i].eRecord));
+        const recordKey: Uint8Array = this.symmetricDecrypt(k, shares[i].eRecordKey, 
+                                      this.RECORD_KEY_STRING + encryptedData[i].matchingIndex);
+        decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedData[i].eRecord, 
+                            this.RECORD_STRING + encryptedData[i].matchingIndex));
       } catch(e) {
-        // TODO: check all errors and handle 
+        throw new Error('Error decrypting user record');
       }
     }
 
@@ -268,9 +271,9 @@ export class umbral {
    * @param {string} eRecord 
    * @returns {IRecord} decrypted record
    */
-  private decryptRecord(recordKey: Uint8Array, eRecord): IRecord {
+  private decryptRecord(recordKey: Uint8Array, eRecord, ad: string): IRecord {
     // TODO: add associated data
-    const decryptedRecord: Uint8Array = this.symmetricDecrypt(recordKey, eRecord, null);
+    const decryptedRecord: Uint8Array = this.symmetricDecrypt(recordKey, eRecord, ad);
     const dStr: string = new encoding.TextDecoder("utf-8").decode(decryptedRecord);
     return JSON.parse(dStr);
   }
