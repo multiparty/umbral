@@ -11,7 +11,6 @@ export interface IEncryptedData {
   readonly eOC: string; // c
   readonly eUser: string; // c'user
   eRecord: string;
-
 }
 
 interface IShare {
@@ -34,6 +33,8 @@ export class umbral {
     '115792089237316195423570985008687907853269984665640564039457584007913129639936',
   ).plus(bigInt(297));
 
+  private KEY_BYTES: number = 32;
+
   /**
    * Initializes sodium
    * @param sodium initialized sodium instance
@@ -42,29 +43,20 @@ export class umbral {
     this.sodium = sodium;
   }
 
-  private concatArrays(a: Uint8Array, b: Uint8Array): Uint8Array {
-    let concat: number[] = [];
-    for (var i = 0; i < a.length; i++) {
-      concat.push((a[i] + b[i]) % 255);
-    }
-
-    return new Uint8Array(concat);
-  }
-
   private deriveValues(randId: Uint8Array): IDerivedValues {
-    // TODO: derive slope from key??
 
     try {
-      const a: Uint8Array = this.sodium.crypto_kdf_derive_from_key(32, 1, "derivation", randId);
-      const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(32, 2, "derivation", randId);
-      const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(32, 3, "derivation", this.concatArrays(a, k)));
-      
+      const a: Uint8Array = this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 1, "slope derivation", randId);
+      const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 2, "key derivation", randId);
+      const ak: Uint8Array = this.sodium.crypto_generichash(this.KEY_BYTES, this.sodium.to_base64(a) + this.sodium.to_base64(k)); 
+      const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 3, "matching index derivation", ak));
+
       const slope: bigInt.BigInteger = bigInt(this.bytesToString(a));
       return {
         slope, k, matchingIndex
       }  
     } catch(e) {
-      throw e;
+      throw new Error('Key derivation failure');
     }
 
   }
@@ -90,10 +82,9 @@ export class umbral {
     const s: bigInt.BigInteger = (derived.slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
     const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
 
-    // TODO: should we authenticate data w/ eRecord?
-    const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), null);
-    const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey), derived.matchingIndex);
-    const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(eRecordKey), derived.matchingIndex);
+    // TODO: change AD to fixed string concatenated with pi. *make sure they are different so they can't be swapped
+    const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey), 'some string' + derived.matchingIndex);
+    const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(recordKey), 'diff string' + derived.matchingIndex);
     
     const msg: IShare = { 
       x: U, 
@@ -101,6 +92,9 @@ export class umbral {
       eRecordKey };
 
     let encryptedData: IEncryptedData[] = [];
+
+    // TODO: change fixed string to something sensible
+    const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), 'other string' + derived.matchingIndex);
 
     for (const i in pkOCs) {
       let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i], skUser);
@@ -209,8 +203,11 @@ export class umbral {
     let shares: IShare[] = [];
 
     for (let i in encryptedData) {
+      // TODO: catch and handle error at this level
       shares.push(this.asymmetricDecrypt(encryptedData[i], skOC, pkUsers[i]));
     }
+    // TODO: check that you still have at least 2 points
+
    // TODO: test all pairs?
    // ignore ciphertexts that fail to decrypt 
    // check share[i] with every other index, decrypt record[i] with each key (once one succeeds, answer is correct, stop.) 
@@ -221,10 +218,17 @@ export class umbral {
 
     let decryptedRecords: IRecord[] = [];
 
+    // let malFormedShares:
+
     for (const i in encryptedData) {
+      try {
+
 
       const recordKey: Uint8Array = this.symmetricDecrypt(k, shares[i].eRecordKey, encryptedData[i].matchingIndex);
       decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedData[i].eRecord));
+      } catch(e) {
+        // TODO: check all errors and handle 
+      }
     }
 
     return decryptedRecords;
@@ -255,6 +259,7 @@ export class umbral {
   
       return decrypted;
     } catch (e) {
+      // TODO: log & continue
       throw e;
     }
   }
@@ -266,6 +271,7 @@ export class umbral {
    * @returns {IRecord} decrypted record
    */
   private decryptRecord(recordKey: Uint8Array, eRecord): IRecord {
+    // TODO: add associated data
     const decryptedRecord: Uint8Array = this.symmetricDecrypt(recordKey, eRecord, null);
     const dStr: string = new encoding.TextDecoder("utf-8").decode(decryptedRecord);
     return JSON.parse(dStr);
@@ -324,6 +330,7 @@ export class umbral {
         eRecordKey: msgObj.eRecordKey
       };
     } catch(e) {
+      // TODO: log & continue
       throw e;
     }
   }
@@ -339,9 +346,10 @@ export class umbral {
 
     try {
       const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
-      const cY: Uint8Array = this.sodium.crypto_box_easy(
+      // TODO: remove skUser
+      const cT: Uint8Array = this.sodium.crypto_box_easy(
         message, nonce, pkOC, skUser);
-      const encrypted: string = this.sodium.to_base64(cY) + "$" + this.sodium.to_base64(nonce);
+      const encrypted: string = this.sodium.to_base64(cT) + "$" + this.sodium.to_base64(nonce);
       
       return encrypted;
     } catch(e) {
