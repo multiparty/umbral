@@ -75,9 +75,7 @@ export class umbral {
     }
 
     const derived: IDerivedValues = this.deriveValues(randId);
-
-    // TODO: make sure U is 32 bytes (use different function?)
-    const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(this.sodium.crypto_hash(record.userId).slice(0, 32)), this.HEX);
+    const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(this.sodium.crypto_generichash(this.KEY_BYTES, record.userId)), this.HEX);
     const kStr: string = this.bytesToString(derived.k);
     const s: bigInt.BigInteger = (derived.slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
     const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
