@@ -72,7 +72,7 @@ export class umbral {
     * @param {Uint8Array} skUser - user's secret key
     * @returns {IEncryptedData[]} an array of records encrypted under each public key
     */
-  public encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], skUser: Uint8Array, userPassPhrase: Uint8Array): IEncryptedData[] {
+  public encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], userPassPhrase: Uint8Array): IEncryptedData[] {
     if (pkOCs.length < 1) {
       throw new Error('No OC public key provided');
     }
@@ -98,7 +98,7 @@ export class umbral {
     const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), this.RECORD_STRING + derived.matchingIndex);
 
     for (const i in pkOCs) {
-      let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i], skUser);
+      let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i]);
       encryptedData.push({matchingIndex: derived.matchingIndex, eOC, eRecord, eUser});
     }
 
@@ -194,18 +194,18 @@ export class umbral {
    * @param {Uint8Array[]} pkUser - user's public key
    * @returns {IRecord[]} array of decrypted records from matched users
    */
-  public decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkUsers: Uint8Array[]): IRecord[] {
+  public decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkOC: Uint8Array): IRecord[] {
 
     this.checkMatches(encryptedData);
-    if (encryptedData.length != pkUsers.length) {
-      throw new Error('Number of matches does not equal number of public keys for users');
-    }
+    // if (encryptedData.length != pkUsers.length) {
+      // throw new Error('Number of matches does not equal number of public keys for users');
+    // }
 
     let shares: IShare[] = [];
 
     for (let i in encryptedData) {
       // TODO: catch and handle error at this level
-      shares.push(this.asymmetricDecrypt(encryptedData[i], skOC, pkUsers[i]));
+      shares.push(this.asymmetricDecrypt(encryptedData[i], skOC, pkOC));
     }
     // TODO: check that you still have at least 2 points
 
@@ -316,13 +316,15 @@ export class umbral {
    * @param {Uint8Array} pkUser - public key of a user
    * @returns {IShare} a decrypted coordinate
    */
-  private asymmetricDecrypt(encryptedData: IEncryptedData, skOC: Uint8Array, pkUser: Uint8Array): IShare {
+  private asymmetricDecrypt(encryptedData: IEncryptedData, skOC: Uint8Array, pkOC: Uint8Array): IShare {
 
     try {
-      const split: string[] = encryptedData.eOC.split("$");
-      const c: Uint8Array = this.sodium.from_base64(split[0]);
-      const nonce: Uint8Array = this.sodium.from_base64(split[1]);
-      const msg: Uint8Array = this.sodium.crypto_box_open_easy(c, nonce, pkUser, skOC);
+      const c: Uint8Array = this.sodium.from_base64(encryptedData.eOC);
+      // const split: string[] = encryptedData.eOC.split("$");
+      // const c: Uint8Array = this.sodium.from_base64(split[0]);
+      // const nonce: Uint8Array = this.sodium.from_base64(split[1]);
+      const msg: Uint8Array = this.sodium.crypto_box_seal_open(c, pkOC, skOC);
+      // const msg: Uint8Array = this.sodium.crypto_box_open_easy(c, nonce, pkUser, skOC);
       const msgObj: IShare = JSON.parse(new encoding.TextDecoder("utf-8").decode(msg));  
       
       return {
@@ -343,16 +345,20 @@ export class umbral {
    * @param {Uint8Array} skUser - secret key of a user
    * @returns {string} encrypted string in base 64 encoding 
    */
-  private asymmetricEncrypt(message: string, pkOC: Uint8Array, skUser: Uint8Array): string {
+  private asymmetricEncrypt(message: string, pkOC: Uint8Array): string {
 
     try {
       const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
       // TODO: remove skUser
-      const cT: Uint8Array = this.sodium.crypto_box_easy(
-        message, nonce, pkOC, skUser);
-      const encrypted: string = this.sodium.to_base64(cT) + "$" + this.sodium.to_base64(nonce);
-      
-      return encrypted;
+      const cT: Uint8Array = this.sodium.crypto_box_seal(message, pkOC);
+
+  
+
+
+      // const cT: Uint8Array = this.sodium.crypto_box_easy(
+        // message, nonce, pkOC, skUser);
+      // const encrypted: string = this.sodium.to_base64(cT) + "$" + this.sodium.to_base64(nonce);
+      return this.sodium.to_base64(cT);      
     } catch(e) {
       throw(e);
     }

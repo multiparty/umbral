@@ -51,10 +51,10 @@ describe('End-to-end tests', () => {
     // note: cryptobox_open: toss secret key at end of session and annotate public key
     // use seal instead? would not be able to verify identity of user (but can do this through account info/decrypted record) 
 
-    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
+    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     userId = userId + userId;
-    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
-    const decryptedRecords = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]);
+    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    const decryptedRecords = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
     expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
   });
 
@@ -71,13 +71,13 @@ describe('End-to-end tests', () => {
     let userId = createName();
     const randId: Uint8Array = performOPRF(perpId);
 
-    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairA.privateKey, userKeyPairA.privateKey);    
+    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairA.privateKey);    
     userId = userId + userId;
-    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairB.privateKey, userKeyPairB.privateKey);
+    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairB.privateKey);
     userId = userId + userId;
-    const encryptedDataC = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairC.privateKey, userKeyPairC.privateKey);
+    const encryptedDataC = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairC.privateKey);
 
-    const decryptedRecords = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0], encryptedDataC[0]], ocKeyPair.privateKey, [userKeyPairA.publicKey, userKeyPairB.publicKey, userKeyPairC.publicKey]);
+    const decryptedRecords = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0], encryptedDataC[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
     expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
   });
     
@@ -94,12 +94,12 @@ describe('End-to-end tests', () => {
       const randId: Uint8Array = performOPRF(perpId);
       let userId: string = createName();
 
-      const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
+      const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
 
       userId = userId + userId;
-      const encryptedDataB = _umbral.encryptData(randId, { perpId, userId}, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
+      const encryptedDataB = _umbral.encryptData(randId, { perpId, userId}, [ocKeyPair.publicKey], userKeyPair.privateKey);
     
-      const decryptedRecords = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]);
+      const decryptedRecords = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
 
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
@@ -126,16 +126,16 @@ describe('End-to-end tests', () => {
     const randId: Uint8Array = performOPRF(perpId);
     let userId: string = createName();
 
-    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey, userKeyPair.privateKey);
+    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
     userId = userId + userId;
-    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey, userKeyPair.privateKey);
+    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
 
     // note: highlight data structure necessary to make this work
     // callisto database to send entire vector of encrypted data entries or just the entries for a particular OC?
 
     // question: what is being fetched by an OC? 
     for (var i = 0; i < ocNum; i++) {
-      const decryptedRecords = _umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], [userKeyPair.publicKey, userKeyPair.publicKey]);
+      const decryptedRecords = _umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], ocPubKeys[i]);
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
   });
@@ -155,10 +155,10 @@ describe('End-to-end tests', () => {
       let perpId = perpIds[i];
       const randId: Uint8Array = performOPRF(perpId);
       // TODO: make higher level function that handles calling encryptData for each perpID
-      const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
+      const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
       userId = userId + userId;
-      const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
-      const decryptedRecords = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]);
+      const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+      const decryptedRecords = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
 
       expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
     }
@@ -187,13 +187,13 @@ describe('End-to-end tests', () => {
       const randId: Uint8Array = performOPRF(perpId);
       let userId: string = createName();
 
-      let encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey, userKeyPair.privateKey);
+      let encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
       userId = userId + userId;
-      let encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey, userKeyPair.privateKey);
+      let encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
 
 
       for (var j = 0; j < ocNum; j++) {
-        let decryptedRecords = _umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], [userKeyPair.publicKey, userKeyPair.publicKey]);
+        let decryptedRecords = _umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], ocPubKeys[i]);
         expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
       }
     }
@@ -210,28 +210,9 @@ describe('Error cases', () => {
     const perpId = createName();
     let userId = createName();
     const randId: Uint8Array = performOPRF(perpId);
-    expect(() => _umbral.encryptData(randId, {perpId, userId}, [], userKeyPair.privateKey, userKeyPair.privateKey))
+    expect(() => _umbral.encryptData(randId, {perpId, userId}, [], userKeyPair.privateKey))
                         .to.throw('No OC public key provided');
 
-  });
-
-  it('Incorrect number of user public keys', async function() {
-    await _sodium.ready;
-    const _umbral = new umbral(_sodium);
-
-    const ocKeyPair = _sodium.crypto_box_keypair();
-    const userKeyPair = _sodium.crypto_box_keypair();
-
-    const perpId = createName();
-    let userId = createName();
-    const randId: Uint8Array = performOPRF(perpId);
-
-    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
-    userId = userId + userId;
-    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
-  
-    expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey]))
-                        .to.throw('Number of matches does not equal number of public keys for users');
   });
 
   it('Too few matches provided', async function() {
@@ -245,13 +226,13 @@ describe('Error cases', () => {
     let userId = createName();
     const randId: Uint8Array = performOPRF(perpId);
 
-    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey,  userKeyPair.privateKey);
+    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     
-    expect(() => _umbral.decryptData([encryptedDataA[0]], ocKeyPair.privateKey, [userKeyPair.publicKey]))
+    expect(() => _umbral.decryptData([encryptedDataA[0]], ocKeyPair.privateKey, ocKeyPair.publicKey))
                         .to.throw('Not enough matches');
   }); 
 
-  it('Incorrect number of user public keys', async function() {
+  it('Incorrect match found', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
 
@@ -264,38 +245,31 @@ describe('Error cases', () => {
     const randIdB: Uint8Array = performOPRF(perpId + perpId);
 
 
-    const encryptedDataA = _umbral.encryptData(randIdA, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
+    const encryptedDataA = _umbral.encryptData(randIdA, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     userId = userId + userId;
-    const encryptedDataB = _umbral.encryptData(randIdB, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
+    const encryptedDataB = _umbral.encryptData(randIdB, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
   
-    expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]))
+    expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, ocKeyPair.publicKey))
                         .to.throw('Incorrect match found');
   });
 
-  it('Asymmetric key decryption failure', async function() {
+  // it('Asymmetric key decryption failure', async function() {
 
-    await _sodium.ready;
-    const _umbral = new umbral(_sodium);
+  //   await _sodium.ready;
+  //   const _umbral = new umbral(_sodium);
 
-    const ocKeyPair = _sodium.crypto_box_keypair();
-    const userKeyPair = _sodium.crypto_box_keypair();
+  //   const ocKeyPair = _sodium.crypto_box_keypair();
+  //   const userKeyPair = _sodium.crypto_box_keypair();
 
-    const perpId = createName();
-    let userId = createName();
-    const randId: Uint8Array = performOPRF(perpId);
+  //   const perpId = createName();
+  //   let userId = createName();
+  //   const randId: Uint8Array = performOPRF(perpId);
 
-    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
-    userId = userId + userId;
-    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey, userKeyPair.privateKey);
-    expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [ocKeyPair.publicKey, ocKeyPair.publicKey])).to.throw('incorrect key pair for the given ciphertext')
-
-
-    // expect(decryptedRecords[0].perpId).to.equal(decryptedRecords[1].perpId).to.equal(perpId);
-    
-    // _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [ocKeyPair.publicKey])
-    // expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, [userKeyPair.publicKey, userKeyPair.publicKey]))
-    //                     .to.throw('Incorrect match found');
-  });
+  //   const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+  //   userId = userId + userId;
+  //   const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+  //   expect(() => _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, ocKeyPair.publicKey)).to.throw('incorrect key pair for the given ciphertext')
+  // });
 
 
   /**
