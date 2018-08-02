@@ -48,9 +48,6 @@ describe('End-to-end tests', () => {
     let userId = createName();
     const randId: Uint8Array = performOPRF(perpId);
 
-    // note: cryptobox_open: toss secret key at end of session and annotate public key
-    // use seal instead? would not be able to verify identity of user (but can do this through account info/decrypted record) 
-
     const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     userId = userId + userId;
     const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
