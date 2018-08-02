@@ -226,9 +226,6 @@ export class umbral {
 
     if (encryptedData.length < 2) return {records, malformed};
 
-   // TODO: test all pairs?
-   // ignore ciphertexts that fail to decrypt 
-   // check share[i] with every other index, decrypt record[i] with each key (once one succeeds, answer is correct, stop.) 
     const slope: bigInt.BigInteger = this.deriveSlope(shares[0], shares[1]);
     const intercept: bigInt.BigInteger = this.getIntercept(shares[0], slope);
 
@@ -247,7 +244,7 @@ export class umbral {
         });
       }
     }
-    
+
     return {
       records,
       malformed
