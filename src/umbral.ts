@@ -1,5 +1,6 @@
 import bigInt = require('big-integer')
 import * as encoding from 'text-encoding';
+import uuidv4 = require('uuid/v4');
 
 export interface IRecord {
   readonly perpId: string; 
@@ -7,6 +8,7 @@ export interface IRecord {
 }
 
 export interface IEncryptedData {
+  readonly id: string; // id
   readonly matchingIndex: string; // pi
   readonly eOC: string; // c
   readonly eUser: string; // c'user
@@ -23,6 +25,16 @@ interface IDerivedValues {
   readonly slope: bigInt.BigInteger;
   readonly k: Uint8Array;
   readonly matchingIndex: string
+}
+
+export interface IMalformed {
+  readonly id: string;
+  readonly error: string;
+}
+
+export interface IDecryptedData {
+  readonly records: IRecord[];
+  readonly malformed: IMalformed[]; // ids
 }
 
 export class umbral {
@@ -94,12 +106,12 @@ export class umbral {
 
     let encryptedData: IEncryptedData[] = [];
 
-    // TODO: change fixed string to something sensible
     const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), this.RECORD_STRING + derived.matchingIndex);
 
     for (const i in pkOCs) {
       let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i]);
-      encryptedData.push({matchingIndex: derived.matchingIndex, eOC, eRecord, eUser});
+      const id: string = uuidv4();
+      encryptedData.push({id, matchingIndex: derived.matchingIndex, eOC, eRecord, eUser});
     }
 
     return encryptedData;
@@ -194,20 +206,25 @@ export class umbral {
    * @param {Uint8Array[]} pkUser - user's public key
    * @returns {IRecord[]} array of decrypted records from matched users
    */
-  public decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkOC: Uint8Array): IRecord[] {
+  public decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkOC: Uint8Array): IDecryptedData {
 
     this.checkMatches(encryptedData);
-    // if (encryptedData.length != pkUsers.length) {
-      // throw new Error('Number of matches does not equal number of public keys for users');
-    // }
-
     let shares: IShare[] = [];
+    let records: IRecord[] = [];
+    let malformed: IMalformed[] = [];
 
     for (let i in encryptedData) {
-      // TODO: catch and handle error at this level
-      shares.push(this.asymmetricDecrypt(encryptedData[i], skOC, pkOC));
+      try {
+        shares.push(this.asymmetricDecrypt(encryptedData[i], skOC, pkOC));
+      } catch (e) {
+        malformed.push({
+          id: encryptedData[i].id,
+          error: e
+        });     
+      }
     }
-    // TODO: check that you still have at least 2 points
+
+    if (encryptedData.length < 2) return {records, malformed};
 
    // TODO: test all pairs?
    // ignore ciphertexts that fail to decrypt 
@@ -217,23 +234,24 @@ export class umbral {
 
     const k: Uint8Array = this.stringToBytes(intercept.toString());
 
-    let decryptedRecords: IRecord[] = [];
-
-    // let malFormedShares:
-
     for (const i in encryptedData) {
       try {
         const recordKey: Uint8Array = this.symmetricDecrypt(k, shares[i].eRecordKey, 
                                       this.RECORD_KEY_STRING + encryptedData[i].matchingIndex);
-        decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedData[i].eRecord, 
+        records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedData[i].eRecord, 
                             this.RECORD_STRING + encryptedData[i].matchingIndex));
       } catch(e) {
-        throw new Error('Error decrypting user record');
+        malformed.push({
+          id: encryptedData[i].id,
+          error: e
+        });
       }
     }
-
-    return decryptedRecords;
     
+    return {
+      records,
+      malformed
+    }    
   }
 
 
@@ -320,11 +338,7 @@ export class umbral {
 
     try {
       const c: Uint8Array = this.sodium.from_base64(encryptedData.eOC);
-      // const split: string[] = encryptedData.eOC.split("$");
-      // const c: Uint8Array = this.sodium.from_base64(split[0]);
-      // const nonce: Uint8Array = this.sodium.from_base64(split[1]);
       const msg: Uint8Array = this.sodium.crypto_box_seal_open(c, pkOC, skOC);
-      // const msg: Uint8Array = this.sodium.crypto_box_open_easy(c, nonce, pkUser, skOC);
       const msgObj: IShare = JSON.parse(new encoding.TextDecoder("utf-8").decode(msg));  
       
       return {
