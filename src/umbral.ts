@@ -199,6 +199,15 @@ export class umbral {
   }
  
 
+  private interpolateShares(s1: IShare, s2: IShare): Uint8Array {
+    
+    const slope: bigInt.BigInteger = this.deriveSlope(s1, s2);
+    const intercept: bigInt.BigInteger = this.getIntercept(s1, slope);
+
+    return this.stringToBytes(intercept.toString());
+
+  }
+
   /**
    * Decrypts an array of encrypted data
    * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
@@ -209,13 +218,14 @@ export class umbral {
   public decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkOC: Uint8Array): IDecryptedData {
 
     this.checkMatches(encryptedData);
-    let shares: IShare[] = [];
+    let shares: object = {};
     let records: IRecord[] = [];
     let malformed: IMalformed[] = [];
 
     for (let i in encryptedData) {
       try {
-        shares.push(this.asymmetricDecrypt(encryptedData[i], skOC, pkOC));
+        let id = encryptedData[i].id;
+        shares[id] = this.asymmetricDecrypt(encryptedData[i], skOC, pkOC);
       } catch (e) {
         malformed.push({
           id: encryptedData[i].id,
@@ -226,23 +236,76 @@ export class umbral {
 
     if (encryptedData.length < 2) return {records, malformed};
 
-    const slope: bigInt.BigInteger = this.deriveSlope(shares[0], shares[1]);
-    const intercept: bigInt.BigInteger = this.getIntercept(shares[0], slope);
+    var encryptedDict: object = {};
+    for (var i = 0; i < encryptedData.length; i++) {
+      var id = encryptedData[i].id;
+      encryptedDict[id] = encryptedData[i];
+    }
 
-    const k: Uint8Array = this.stringToBytes(intercept.toString());
+    const decryptedDict: object = {};
+    while (Object.keys(shares).length > 0) {
+      
 
-    for (const i in encryptedData) {
-      try {
-        const recordKey: Uint8Array = this.symmetricDecrypt(k, shares[i].eRecordKey, 
-                                      this.RECORD_KEY_STRING + encryptedData[i].matchingIndex);
-        records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedData[i].eRecord, 
-                            this.RECORD_STRING + encryptedData[i].matchingIndex));
-      } catch(e) {
-        malformed.push({
-          id: encryptedData[i].id,
-          error: e
-        });
+      let ids = Object.keys(shares);
+      let shareId = ids[0];
+      let share = shares[ids[0]];
+
+      for (var id in decryptedDict) {
+        try {
+          let s2: IShare = decryptedDict[id];
+          const k: Uint8Array = this.interpolateShares(share, s2);
+          const recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey, 
+                                                              this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
+
+          records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord, 
+                                          this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
+
+          decryptedDict[shareId] = share;
+          break;
+
+        } catch(e) {
+          malformed.push({
+            id: 'TODO',
+            error: e
+          });
+        }
+      
       }
+
+      for (let i = 1; i < ids.length; i++) {
+        try {
+          let s2: IShare = shares[ids[i]];
+          let s2Id: string = ids[i];
+          const k: Uint8Array = this.interpolateShares(share, s2);
+
+          // decrypt share 1
+          let recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey, 
+                                        this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
+
+          records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord, 
+                      this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
+
+          decryptedDict[shareId] = share;
+
+          // decrypt share 2
+          recordKey = this.symmetricDecrypt(k, s2.eRecordKey, 
+            this.RECORD_KEY_STRING + encryptedDict[s2Id].matchingIndex);
+          // TODO: FIX THIS. must be s2's id and share
+          records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[s2Id].eRecord, 
+          this.RECORD_STRING + encryptedDict[s2Id].matchingIndex));
+          decryptedDict[ids[i]] = s2;
+
+          delete shares[s2Id];
+          break;
+          
+        } catch(e) {
+          malformed.push({
+            id: shareId,
+            error: e
+          });
+        }
+      }
+      delete shares[ids[0]];
     }
 
     return {
@@ -387,12 +450,6 @@ export class umbral {
 
       // TODO: double check that args are in correct order
       const cT: Uint8Array = this.sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(msg, ad, null, nonce, key);
-
- 
-
-      // const cT: Uint8Array = this.sodium.crypto_secretbox_easy(msg, nonce, key);
-
-
       const encrypted: string = this.sodium.to_base64(cT) + "$" + this.sodium.to_base64(nonce);
 
       return encrypted;
@@ -416,7 +473,3 @@ export class umbral {
     return result.toString();
   }
 }
-
-
-
-
