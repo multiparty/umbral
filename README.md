@@ -14,28 +14,35 @@ umbral.init(_sodium);
 
 ### Encryption
 ```javascript
-/**
-  * Encrypts a user's record
-  * @param {Uint8Array} randId - random ID
-  * @param {IRecord} record - user record
-  * @param {Uint8Array[]} publicKeys - options counselor public keys
-  * @param {Uint8Array} skUser - user's secret key
-  * @returns {IEncryptedData[]} an array of records encrypted under each public key
-  */
-function encryptData(randId: Uint8Array, record: IRecord, publicKeys: Uint8Array[], skUser: Uint8Array)
+
+
+  /**
+   * Encryption workflow
+   * @param {Uint8Array} randId - randomized id resulting from OPRF
+   * @param {IRecord} record - user's record
+   * @param {Uint8Array[]} pkOCs - public keys for each OC
+   * @param {Uint8Array} userPassPhrase - user passphrase used to encrypt a record key
+   * @returns {IEncryptedData[]} ciphertext encrypted under each pkOC
+   */
+  public encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], userPassPhrase: Uint8Array): IEncryptedData[]
 ```
 
 ### Decryption
 The function should be provided with **matched** encrypted records
 ```javascript
-/**
- * Decrypts an array of encrypted data
- * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
- * @param {Uint8Array} skOC - secret key of an options counselor
- * @param pkUser - user's private key
- * @returns {IRecord[]} array of decrypted records from matched users
- */
-function decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkUser: Uint8Array)
+
+  /**
+   * Decryption workflow
+   * @param encryptedData - an array of matched encrypted data objects corresponding to the OC 
+   * @param pkOC - OC's public key
+   * @param skOC - OC's private key
+   * @returns {IDecryptedData} decrypted records and malformed shares
+   */
+  public decryptData(encryptedData: IEncryptedData[], pkOC: Uint8Array, skOC: Uint8Array): IDecryptedData {
+
+
+
+
 ```
 
 

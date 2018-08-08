@@ -2,6 +2,10 @@ import bigInt = require('big-integer')
 import * as encoding from 'text-encoding';
 import uuidv4 = require('uuid/v4');
 
+
+/**
+ * Interfaces
+ */
 export interface IRecord {
   readonly perpId: string; 
   readonly userId: string;
@@ -37,6 +41,9 @@ export interface IDecryptedData {
   readonly malformed: IMalformed[]; // ids
 }
 
+/**
+ * Library Implementation
+ */
 export class umbral {
   private sodium = null;
 
@@ -51,6 +58,10 @@ export class umbral {
   private USER_EDIT_STRING: string = 'user edit';
 
   /**
+   * Public Functions
+   */
+
+  /**
    * Initializes sodium
    * @param sodium initialized sodium instance
    */
@@ -58,32 +69,15 @@ export class umbral {
     this.sodium = sodium;
   }
 
-  private deriveValues(randId: Uint8Array): IDerivedValues {
 
-    try {
-      const a: Uint8Array = this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 1, "slope derivation", randId);
-      const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 2, "key derivation", randId);
-      const ak: Uint8Array = this.sodium.crypto_generichash(this.KEY_BYTES, this.sodium.to_base64(a) + this.sodium.to_base64(k)); 
-      const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 3, "matching index derivation", ak));
-
-      const slope: bigInt.BigInteger = bigInt(this.bytesToString(a));
-      return {
-        slope, k, matchingIndex
-      }  
-    } catch(e) {
-      throw new Error('Key derivation failure');
-    }
-
-  }
-
-   /**
-    * Encrypts a user's record
-    * @param {Uint8Array} randId - random ID (pHat)
-    * @param {IRecord} record - user record
-    * @param {Uint8Array[]} pkOCs - options counselor public keys
-    * @param {Uint8Array} skUser - user's secret key
-    * @returns {IEncryptedData[]} an array of records encrypted under each public key
-    */
+  /**
+   * Encryption workflow
+   * @param {Uint8Array} randId - randomized id resulting from OPRF
+   * @param {IRecord} record - user's record
+   * @param {Uint8Array[]} pkOCs - public keys for each OC
+   * @param {Uint8Array} userPassPhrase - user passphrase used to encrypt a record key
+   * @returns {IEncryptedData[]} ciphertext encrypted under each pkOC
+   */
   public encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], userPassPhrase: Uint8Array): IEncryptedData[] {
     if (pkOCs.length < 1) {
       throw new Error('No OC public key provided');
@@ -95,7 +89,6 @@ export class umbral {
     const s: bigInt.BigInteger = (derived.slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
     const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
 
-    // TODO: change AD to fixed string concatenated with pi. *make sure they are different so they can't be swapped
     const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey), this.RECORD_KEY_STRING + derived.matchingIndex);
     const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(recordKey), this.USER_EDIT_STRING + derived.matchingIndex);
     
@@ -116,6 +109,26 @@ export class umbral {
 
     return encryptedData;
   }  
+
+
+
+  private deriveValues(randId: Uint8Array): IDerivedValues {
+
+    try {
+      const a: Uint8Array = this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 1, "slope derivation", randId);
+      const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 2, "key derivation", randId);
+      const ak: Uint8Array = this.sodium.crypto_generichash(this.KEY_BYTES, this.sodium.to_base64(a) + this.sodium.to_base64(k)); 
+      const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 3, "matching index derivation", ak));
+
+      const slope: bigInt.BigInteger = bigInt(this.bytesToString(a));
+      return {
+        slope, k, matchingIndex
+      }  
+    } catch(e) {
+      throw new Error('Key derivation failure');
+    }
+
+  }
 
   /**
    * Mathematically correct mod over a prime
@@ -225,14 +238,15 @@ export class umbral {
 
   }
 
+
   /**
-   * Decrypts an array of encrypted data
-   * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
-   * @param {Uint8Array} skOC - secret key of an options counselor
-   * @param {Uint8Array[]} pkUser - user's public key
-   * @returns {IRecord[]} array of decrypted records from matched users
+   * Decryption workflow
+   * @param encryptedData - an array of matched encrypted data objects corresponding to the OC 
+   * @param pkOC - OC's public key
+   * @param skOC - OC's private key
+   * @returns {IDecryptedData} decrypted records and malformed shares
    */
-  public decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkOC: Uint8Array): IDecryptedData {
+  public decryptData(encryptedData: IEncryptedData[], pkOC: Uint8Array, skOC: Uint8Array): IDecryptedData {
 
     this.checkMatches(encryptedData);
     let shares: object = {};
