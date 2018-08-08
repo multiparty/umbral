@@ -107,7 +107,7 @@ export class umbral {
     let encryptedData: IEncryptedData[] = [];
 
     const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), this.RECORD_STRING + derived.matchingIndex);
-
+    
     for (const i in pkOCs) {
       let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i]);
       const id: string = uuidv4();
@@ -163,19 +163,30 @@ export class umbral {
    * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
    * @returns {IRecord[]} an array of decrypted records (should contain same content)
    */
-  public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]): IRecord[] {
+  public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]): IDecryptedData {
 
     // NOTE: is it necessary to do this for ALL oc keys?
-    const decryptedRecords: IRecord[] = [];
+    const records: IRecord[] = [];
+    const malformed: IMalformed[] = [];
 
     for (let i in userEncryptedData) {
       const eUser = userEncryptedData[i].eUser;
 
-      const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser, null);
-      decryptedRecords.push(this.decryptRecord(this.sodium.from_base64(recordKey), userEncryptedData[i].eRecord, this.RECORD_STRING + userEncryptedData[i].matchingIndex));
-    }
+      try {
+        const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser, 
+                                      this.USER_EDIT_STRING + userEncryptedData[i].matchingIndex);
+        records.push(this.decryptRecord(this.sodium.from_base64(recordKey), userEncryptedData[i].eRecord, 
+                      this.RECORD_STRING + userEncryptedData[i].matchingIndex));
 
-    return decryptedRecords;
+      } catch(e) {
+        malformed.push({
+          id: userEncryptedData[i].id,
+          error: e,
+        })
+        continue;
+      }
+    }
+    return { records, malformed }
   }
 
   /**
@@ -185,17 +196,23 @@ export class umbral {
    * @param {IRecord} updatedRecord - a user's updated record
    * @returns {IEncryptedData[]} an array of encrypted data containing the cipher text of the updated record
    */
-  public updateUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[], updatedRecord: IRecord): IEncryptedData[] {
+  public updateUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[], updatedRecord: IRecord): IMalformed[] {
+    let malformed: IMalformed[] = [];
 
     for (let i in userEncryptedData) {
-
       const eUser = userEncryptedData[i].eUser;
-      const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser, this.USER_EDIT_STRING + userEncryptedData[i].matchingIndex);
-      const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(updatedRecord), this.RECORD_STRING + userEncryptedData[i].matchingIndex);
+      try {
+        const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser, this.USER_EDIT_STRING + userEncryptedData[i].matchingIndex);
+        userEncryptedData[i].eRecord = this.symmetricEncrypt(this.sodium.from_base64(recordKey), JSON.stringify(updatedRecord), this.RECORD_STRING + userEncryptedData[i].matchingIndex);
+      } catch(e) {
+        malformed.push({
+          id: userEncryptedData[i].id,
+          error: e
+        });
 
-      userEncryptedData[i].eRecord = eRecord;
+      }
     }
-    return userEncryptedData;
+    return malformed;
   }
  
 
@@ -290,7 +307,6 @@ export class umbral {
           // decrypt share 2
           recordKey = this.symmetricDecrypt(k, s2.eRecordKey, 
             this.RECORD_KEY_STRING + encryptedDict[s2Id].matchingIndex);
-          // TODO: FIX THIS. must be s2's id and share
           records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[s2Id].eRecord, 
           this.RECORD_STRING + encryptedDict[s2Id].matchingIndex));
           decryptedDict[ids[i]] = s2;
@@ -334,8 +350,6 @@ export class umbral {
 
       const decrypted: Uint8Array = this.sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, cT, ad, nonce, key);
 
-      // const decrypted: Uint8Array = this.sodium.crypto_secretbox_open_easy(cT, nonce, key);
-  
       return decrypted;
     } catch (e) {
       // TODO: log & continue
@@ -423,15 +437,7 @@ export class umbral {
 
     try {
       const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
-      // TODO: remove skUser
       const cT: Uint8Array = this.sodium.crypto_box_seal(message, pkOC);
-
-  
-
-
-      // const cT: Uint8Array = this.sodium.crypto_box_easy(
-        // message, nonce, pkOC, skUser);
-      // const encrypted: string = this.sodium.to_base64(cT) + "$" + this.sodium.to_base64(nonce);
       return this.sodium.to_base64(cT);      
     } catch(e) {
       throw(e);

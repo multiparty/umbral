@@ -1,4 +1,4 @@
-import { umbral } from '../src/umbral';
+import { umbral, IEncryptedData, IMalformed, IDecryptedData } from '../src/umbral';
 import { expect } from 'chai';
 import { OPRF, IMaskedData } from 'oprf';
 var _sodium = require('libsodium-wrappers-sumo');
@@ -37,7 +37,7 @@ function performOPRF(input: string): Uint8Array {
 
 describe('End-to-end tests', () => {
   
-  it('basic example with 1 OC, 2 matched users', async function() {
+  it('Basic example with 1 OC, 2 matched users', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
 
@@ -55,7 +55,7 @@ describe('End-to-end tests', () => {
     expect(decryptedRecords.records[0].perpId).to.equal(decryptedRecords.records[1].perpId).to.equal(perpId);
   });
 
-  it('basic example with 3 matches', async function() {
+  it('Basic example with 3 matches', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
 
@@ -78,7 +78,7 @@ describe('End-to-end tests', () => {
     expect(decryptedRecords.records[0].perpId).to.equal(decryptedRecords.records[1].perpId).to.equal(perpId);
   });
     
-  it('stress test', async function() {
+  it('Stress test', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
 
@@ -102,7 +102,7 @@ describe('End-to-end tests', () => {
     }
   });
 
-  it('multiple OCs', async function() {
+  it('Multiple OCs', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
 
@@ -138,7 +138,7 @@ describe('End-to-end tests', () => {
   });
 
 
-  it('multiple perpIds', async function() {
+  it('Multiple perpIds', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
 
@@ -161,7 +161,7 @@ describe('End-to-end tests', () => {
     }
   });
 
-  it('multiple perpIds and multiple OCs', async function() {
+  it('Multiple perpIds and multiple OCs', async function() {
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
 
@@ -250,6 +250,7 @@ describe('Error cases', () => {
                         .to.throw('Incorrect match found');
   });
 
+
   // it('Asymmetric key decryption failure', async function() {
 
   //   await _sodium.ready;
@@ -282,4 +283,57 @@ describe('Error cases', () => {
    * -New stress test with random number of entries per perp and randomly select malformed shares to include in data
    * 
    */
+});
+
+
+
+describe('User editing', () => {
+  it('Decrypting eUser', async function() {
+    await _sodium.ready;
+    const _umbral = new umbral(_sodium);
+
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    const perpId = createName();
+    let userId = createName();
+
+    const randIdA: Uint8Array = performOPRF(perpId);
+    const encryptedDataA = _umbral.encryptData(randIdA, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+
+    const decrypted = _umbral.decryptUserRecord(userKeyPair.privateKey, encryptedDataA);
+
+    expect(decrypted.malformed.length).to.equal(0);
+    expect(decrypted.records[0].perpId).to.equal(perpId);
+    expect(decrypted.records[0].userId).to.equal(userId);
+
+  });
+
+  it('Updating user record', async function() {
+    await _sodium.ready;
+    const _umbral = new umbral(_sodium);
+
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    const perpId = createName();
+    const userId = createName();
+
+    const randIdA: Uint8Array = performOPRF(perpId);
+    const encryptedDataA: IEncryptedData[] = _umbral.encryptData(randIdA, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+
+    const newPerpId: string = createName();
+
+    const malformed: IMalformed[] = _umbral.updateUserRecord(userKeyPair.privateKey, encryptedDataA, {
+      perpId: newPerpId,
+      userId
+    });
+
+    expect(malformed.length).to.equal(0);
+    const decrypted: IDecryptedData = _umbral.decryptUserRecord(userKeyPair.privateKey, encryptedDataA);
+  
+    expect(decrypted.records[0].perpId).to.equal(newPerpId);
+
+
+  });
 });
