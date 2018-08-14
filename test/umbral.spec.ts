@@ -1,6 +1,7 @@
 import { umbral, IEncryptedData, IMalformed, IDecryptedData } from '../src/umbral';
 import { expect } from 'chai';
 import { OPRF, IMaskedData } from 'oprf';
+import { AssertionError } from 'assert';
 var _sodium = require('libsodium-wrappers-sumo');
 
 function getRandom(max: number): number {
@@ -288,14 +289,62 @@ describe('Error cases', () => {
     // expect(() => _umbral.decryptData().to.throw('incorrect key pair for the given ciphertext')
   });
 
+  it('2 shares can decrypt, 1 cannot', async function() {
+
+    await _sodium.ready;
+    const _umbral = new umbral(_sodium);
+
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPairA = _sodium.crypto_box_keypair();
+    const userKeyPairB = _sodium.crypto_box_keypair();
+    const userKeyPairC = _sodium.crypto_box_keypair();
+
+    const perpId = createName();
+    let userId = createName();
+    const randId: Uint8Array = performOPRF(perpId);
+
+    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairA.privateKey);    
+    userId = userId + userId;
+    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairB.privateKey);
+    userId = userId + userId;
+    const encryptedDataC = _umbral.encryptData(performOPRF(perpId + perpId), { perpId, userId }, [ocKeyPair.publicKey], userKeyPairC.privateKey);
+
+    const decrypted = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0], encryptedDataC[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
+
+    expect(decrypted.records.length).to.equal(2);
+    expect(decrypted.records[0].perpId).to.equal(decrypted.records[1].perpId);
+    expect(decrypted.malformed.length).to.equal(1);    
+  });
+
+
+  it('3 malformed shares', async function() {
+
+    await _sodium.ready;
+    const _umbral = new umbral(_sodium);
+
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
+    
+    const perpId = createName();
+    let userId = createName();
+
+    const encryptedDataA = _umbral.encryptData(performOPRF(perpId), { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);    
+    const encryptedDataB = _umbral.encryptData(performOPRF(perpId + perpId), { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    const encryptedDataC = _umbral.encryptData(performOPRF(perpId + perpId + perpId), { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+
+    const decrypted = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0], encryptedDataC[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
+
+    expect(decrypted.malformed.length).to.equal(3);
+    // expect(decrypted.records.length).to.equal(2);
+    // expect(decrypted.records[0].perpId).to.equal(decrypted.records[1].perpId);
+    // expect(decrypted.malformed.length).to.equal(1);    
+  });
 
   /**
    * TODO:
    * -Decryption succeeds but authentication of matching index fails
    * -User edits record
    * -Check algorithm for interpolation: 
-   *  -ABC all can decrypt
-   *  -AB can decrypt, C can't
    *  -A can't decrypt, BC can
    *  -No one can decrypt -> get back all shares in malformed array
    *  -ABC can decrypt, CD can cdecrypt

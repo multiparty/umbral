@@ -300,7 +300,6 @@ export class umbral {
           const k: Uint8Array = this.interpolateShares(share, s2);
           const recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey, 
                                                               this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
-
           records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord, 
                                           this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
 
@@ -308,13 +307,10 @@ export class umbral {
           break;
 
         } catch(e) {
-          malformed.push({
-            id: 'TODO',
-            error: e
-          });
         }
       
       }
+
 
       for (let i = 1; i < ids.length; i++) {
         try {
