@@ -1,8 +1,10 @@
 import { umbral, IEncryptedData, IMalformed, IDecryptedData } from '../src/umbral';
 import { expect } from 'chai';
 import { OPRF, IMaskedData } from 'oprf';
-import { AssertionError } from 'assert';
+
 var _sodium = require('libsodium-wrappers-sumo');
+
+
 
 function getRandom(max: number): number {
   return Math.floor(Math.random() * Math.floor(max));
@@ -269,7 +271,29 @@ describe('Error cases', () => {
   });
 
 
-  it('Asymmetric key decryption failure', async function() {
+
+  it('Asymmetric encryption failure', async function() {
+
+    await _sodium.ready;
+    const _umbral = new umbral(_sodium);
+
+    const ocKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    const key: Uint8Array = new Uint8Array([0]);
+
+    const perpId = createName();
+    let userId = createName();
+    const randId: Uint8Array = performOPRF(perpId);
+    const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [key], userKeyPair.privateKey);
+    const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    
+    expect(encryptedDataA.length).to.equal(0);
+    expect(encryptedDataB.length).to.equal(1);    
+
+  });
+
+  it('Asymmetric decryption failure', async function() {
 
     await _sodium.ready;
     const _umbral = new umbral(_sodium);
@@ -284,9 +308,11 @@ describe('Error cases', () => {
     const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
     userId = userId + userId;
     const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-    _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.publicKey, ocKeyPair.publicKey);
+    const decrypted = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.publicKey, ocKeyPair.publicKey);
     
-    // expect(() => _umbral.decryptData().to.throw('incorrect key pair for the given ciphertext')
+    expect(decrypted.malformed.length).to.equal(2);
+    expect(decrypted.malformed[0].error.toString()).to.contain('Asymmetric decryption failure');
+    expect(decrypted.malformed[1].error.toString()).to.contain('Asymmetric decryption failure');
   });
 
   it('2 shares can decrypt, 1 cannot', async function() {
@@ -335,9 +361,7 @@ describe('Error cases', () => {
     const decrypted = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0], encryptedDataC[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
 
     expect(decrypted.malformed.length).to.equal(3);
-    // expect(decrypted.records.length).to.equal(2);
-    // expect(decrypted.records[0].perpId).to.equal(decrypted.records[1].perpId);
-    // expect(decrypted.malformed.length).to.equal(1);    
+    expect(decrypted.records.length).to.equal(0);
   });
 
   /**

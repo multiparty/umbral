@@ -89,32 +89,36 @@ export class umbral {
       throw new Error('No OC public key provided');
     }
 
-    const derived: IDerivedValues = this.deriveValues(randId);
-    const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(this.sodium.crypto_generichash(this.KEY_BYTES, record.userId)), this.HEX);
-    const kStr: string = this.bytesToString(derived.k);
-    const s: bigInt.BigInteger = (derived.slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
-    const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
+    try {
+      const derived: IDerivedValues = this.deriveValues(randId);
+      const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(this.sodium.crypto_generichash(this.KEY_BYTES, record.userId)), this.HEX);
+      const kStr: string = this.bytesToString(derived.k);
+      const s: bigInt.BigInteger = (derived.slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
+      const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
 
-    // TODO: change AD to fixed string concatenated with pi. *make sure they are different so they can't be swapped
-    const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey), this.RECORD_KEY_STRING + derived.matchingIndex);
-    const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(recordKey), this.USER_EDIT_STRING + derived.matchingIndex);
-    
-    const msg: IShare = { 
-      x: U, 
-      y: s, 
-      eRecordKey };
+      // TODO: change AD to fixed string concatenated with pi. *make sure they are different so they can't be swapped
+      const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey), this.RECORD_KEY_STRING + derived.matchingIndex);
+      const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(recordKey), this.USER_EDIT_STRING + derived.matchingIndex);
+      
+      const msg: IShare = { 
+        x: U, 
+        y: s, 
+        eRecordKey };
 
-    let encryptedData: IEncryptedData[] = [];
+      let encryptedData: IEncryptedData[] = [];
 
-    const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), this.RECORD_STRING + derived.matchingIndex);
-    
-    for (const i in pkOCs) {
-      let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i]);
-      const id: string = uuidv4();
-      encryptedData.push({id, matchingIndex: derived.matchingIndex, eOC, eRecord, eUser});
+      const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), this.RECORD_STRING + derived.matchingIndex);
+      
+      for (const i in pkOCs) {
+        let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i]);
+        const id: string = uuidv4();
+        encryptedData.push({id, matchingIndex: derived.matchingIndex, eOC, eRecord, eUser});
+      }
+
+      return encryptedData;
+    } catch (e) {
+      return [];
     }
-
-    return encryptedData;
   }  
 
   /**
@@ -375,7 +379,6 @@ export class umbral {
 
       return decrypted;
     } catch (e) {
-      // TODO: log & continue
       throw e;
     }
   }
@@ -387,7 +390,6 @@ export class umbral {
    * @returns {IRecord} decrypted record
    */
   private decryptRecord(recordKey: Uint8Array, eRecord, ad: string): IRecord {
-    // TODO: add associated data
     const decryptedRecord: Uint8Array = this.symmetricDecrypt(recordKey, eRecord, ad);
     const dStr: string = new encoding.TextDecoder("utf-8").decode(decryptedRecord);
     return JSON.parse(dStr);
@@ -444,8 +446,7 @@ export class umbral {
         eRecordKey: msgObj.eRecordKey
       };
     } catch(e) {
-      // TODO: log & continue
-      throw e;
+      throw new Error("Asymmetric decryption failure");
     }
   }
 
