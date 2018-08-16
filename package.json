@@ -29,7 +29,8 @@
     "source-map-support": "^0.5.8",
     "ts-node": "^6.1.0",
     "typedoc": "^0.11.1",
-    "typings": "^2.1.1"
+    "typings": "^2.1.1",
+    "nyc": "^12.0.2"
   },
   "dependencies": {
     "@types/node": "^10.3.2",
