@@ -23,7 +23,7 @@
   "dependencies": {
     "big-integer": "^1.6.30",
     "encoding": "^0.1.12",
-    "oprf": "0.0.10",
+    "oprf": "^0.0.13",
     "text-encoding": "^0.6.4",
     "uuid": "^3.3.2"
   },

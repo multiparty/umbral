@@ -32,7 +32,7 @@ function performOPRF(input: string): Uint8Array {
   const oprf = new OPRF(_sodium);
   const sk = oprf.generateRandomScalar();
   const masked: IMaskedData = oprf.maskInput(input);
-  const salted: number[] = oprf.saltInput(masked.point, sk);
+  const salted: number[] = oprf.scalarMult(masked.point, sk);
   const unmasked = oprf.unmaskInput(salted, masked.mask);
 
   return new Uint8Array(unmasked);
