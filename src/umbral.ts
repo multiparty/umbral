@@ -1,6 +1,6 @@
 import bigInt = require('big-integer');
-import uuidv4 = require('uuid/v4');
 import * as encoding from 'text-encoding';
+import uuidv4 = require('uuid/v4');
 
 export interface IRecord {
     readonly perpId: string;
@@ -37,12 +37,12 @@ export interface IDecryptedData {
     readonly malformed: IMalformed[]; // ids
 }
 
-export class umbral {
+export class Umbral {
     private sodium = null;
 
     private HEX: number = 16;
     private PRIME: bigInt.BigInteger = bigInt(
-        '115792089237316195423570985008687907853269984665640564039457584007913129639936',
+        '115792089237316195423570985008687907853269984665640564039457584007913129639936'
     ).plus(bigInt(297));
 
     private KEY_BYTES: number = 32;
@@ -58,24 +58,6 @@ export class umbral {
         this.sodium = sodium;
     }
 
-    private deriveValues(randId: Uint8Array): IDerivedValues {
-
-        try {
-            const a: Uint8Array = this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 1, "slope derivation", randId);
-            const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 2, "key derivation", randId);
-            const ak: Uint8Array = this.sodium.crypto_generichash(this.KEY_BYTES, this.sodium.to_base64(a) + this.sodium.to_base64(k));
-            const matchingIndex: string = this.sodium.to_base64(this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 3, "matching index derivation", ak));
-
-            const slope: bigInt.BigInteger = bigInt(this.bytesToString(a));
-            return {
-                slope, k, matchingIndex
-            }
-        } catch (e) {
-            throw new Error('Key derivation failure');
-        }
-
-    }
-
     /**
      * Encrypts a user's record
      * @param {Uint8Array} randId - random ID (pHat)
@@ -84,34 +66,52 @@ export class umbral {
      * @param {Uint8Array} skUser - user's secret key
      * @returns {IEncryptedData[]} an array of records encrypted under each public key
      */
-    public encryptData(randId: Uint8Array, record: IRecord, pkOCs: Uint8Array[], userPassPhrase: Uint8Array): IEncryptedData[] {
+    public encryptData(randId: Uint8Array,
+                       record: IRecord,
+                       pkOCs: Uint8Array[],
+                       userPassPhrase: Uint8Array): IEncryptedData[] {
         if (pkOCs.length < 1) {
             throw new Error('No OC public key provided');
         }
 
         try {
             const derived: IDerivedValues = this.deriveValues(randId);
-            const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(this.sodium.crypto_generichash(this.KEY_BYTES, record.userId)), this.HEX);
+            const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(
+                this.sodium.crypto_generichash(this.KEY_BYTES, record.userId)), this.HEX);
+
             const kStr: string = this.bytesToString(derived.k);
             const s: bigInt.BigInteger = (derived.slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
             const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
 
-            // TODO: change AD to fixed string concatenated with pi. *make sure they are different so they can't be swapped
-            const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey), this.RECORD_KEY_STRING + derived.matchingIndex);
-            const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(recordKey), this.USER_EDIT_STRING + derived.matchingIndex);
+            // TODO: change AD to fixed string concatenated with pi.
+            // *make sure they are different so they can't be swapped
+            const eRecordKey: string = this.symmetricEncrypt(
+                derived.k,
+                this.sodium.to_base64(recordKey),
+                this.RECORD_KEY_STRING + derived.matchingIndex
+            );
+            const eUser: string = this.symmetricEncrypt(
+                userPassPhrase,
+                this.sodium.to_base64(recordKey),
+                this.USER_EDIT_STRING + derived.matchingIndex
+            );
 
             const msg: IShare = {
+                eRecordKey,
                 x: U,
                 y: s,
-                eRecordKey
             };
 
-            let encryptedData: IEncryptedData[] = [];
+            const encryptedData: IEncryptedData[] = [];
 
-            const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), this.RECORD_STRING + derived.matchingIndex);
+            const eRecord: string = this.symmetricEncrypt(
+                recordKey,
+                JSON.stringify(record),
+                this.RECORD_STRING + derived.matchingIndex
+            );
 
-            for (const i in pkOCs) {
-                let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i]);
+            for (const pkOC of pkOCs) {
+                const eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOC);
                 const id: string = uuidv4();
                 encryptedData.push({id, matchingIndex: derived.matchingIndex, eOC, eRecord, eUser});
             }
@@ -120,6 +120,207 @@ export class umbral {
         } catch (e) {
             return [];
         }
+    }
+
+    /**
+     * Decrypts a user's record for editing purposes
+     * @param {Uint8Array} userPassPhrase - original passphrase used to encrypt the record key
+     * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
+     * @returns {IRecord[]} an array of decrypted records (should contain same content)
+     */
+    public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]): IDecryptedData {
+
+        // NOTE: is it necessary to do this for ALL oc keys?
+        const records: IRecord[] = [];
+        const malformed: IMalformed[] = [];
+
+        for (const eUserData of userEncryptedData) {
+            const eUser = eUserData.eUser;
+
+            try {
+                const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser,
+                    this.USER_EDIT_STRING + eUserData.matchingIndex);
+                records.push(this.decryptRecord(this.sodium.from_base64(recordKey), eUserData.eRecord,
+                    this.RECORD_STRING + eUserData.matchingIndex));
+
+            } catch (e) {
+                malformed.push({
+                    error: e,
+                    id: eUserData.id,
+                });
+            }
+        }
+        return {records, malformed};
+    }
+
+    /**
+     *
+     * @param {Uint8Array} userPassPhrase - original passphrase used to encrypt the record key
+     * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
+     * @param {IRecord} updatedRecord - a user's updated record
+     * @returns {IEncryptedData[]} an array of encrypted data containing the cipher text of the updated record
+     */
+    public updateUserRecord(userPassPhrase: Uint8Array,
+                            userEncryptedData: IEncryptedData[],
+                            updatedRecord: IRecord): IMalformed[] {
+        const malformed: IMalformed[] = [];
+
+        for (const eUserData of userEncryptedData) {
+            const eUser = eUserData.eUser;
+            try {
+                const recordKey = this.symmetricDecrypt(
+                    userPassPhrase,
+                    eUser,
+                    this.USER_EDIT_STRING + eUserData.matchingIndex
+                );
+
+                eUserData.eRecord = this.symmetricEncrypt(
+                    this.sodium.from_base64(recordKey),
+                    JSON.stringify(updatedRecord),
+                    this.RECORD_STRING + eUserData.matchingIndex
+                );
+            } catch (e) {
+                malformed.push({
+                    error: e,
+                    id: eUserData.id,
+                });
+
+            }
+        }
+        return malformed;
+    }
+
+    /**
+     * Decrypts an array of encrypted data
+     * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
+     * @param {Uint8Array} skOC - secret key of an options counselor
+     * @param {Uint8Array[]} pkUser - user's public key
+     * @returns {IRecord[]} array of decrypted records from matched users
+     */
+    public decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkOC: Uint8Array): IDecryptedData {
+
+        const malformed: IMalformed[] = this.checkMatches(encryptedData);
+
+        if (malformed.length === encryptedData.length) {
+            return {
+                malformed,
+                records: [],
+            };
+        }
+
+        const shares: object = {};
+        const records: IRecord[] = [];
+
+        for (const eData of encryptedData) {
+            try {
+                const id = eData.id;
+                shares[id] = this.asymmetricDecrypt(eData, skOC, pkOC);
+            } catch (e) {
+                malformed.push({
+                    error: e,
+                    id: eData.id,
+                });
+            }
+        }
+
+        if (encryptedData.length < 2) {
+            return {records, malformed};
+        }
+
+        const encryptedDict: object = {};
+        for (const eData of encryptedData) {
+            const id = eData.id;
+            encryptedDict[id] = eData;
+        }
+
+        const decryptedMap = new Map();
+        while (Object.keys(shares).length > 0) {
+
+            const ids = Object.keys(shares);
+            const shareId = ids[0];
+            const share = shares[ids[0]];
+
+            for (const [key, s2] of decryptedMap) {
+                try {
+                    const k: Uint8Array = this.interpolateShares(share, s2);
+                    const recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey,
+                        this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
+                    records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord,
+                        this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
+
+                    decryptedMap.set(shareId, share);
+                    break;
+
+                } catch (e) {
+                    // TODO Handle error
+                }
+
+            }
+
+            for (let i = 1; i < ids.length; i++) {
+                try {
+                    const s2: IShare = shares[ids[i]];
+                    const s2Id: string = ids[i];
+                    const k: Uint8Array = this.interpolateShares(share, s2);
+
+                    // decrypt share 1
+                    let recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey,
+                        this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
+
+                    records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord,
+                        this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
+
+                    decryptedMap.set(shareId, share);
+
+                    // decrypt share 2
+                    recordKey = this.symmetricDecrypt(k, s2.eRecordKey,
+                        this.RECORD_KEY_STRING + encryptedDict[s2Id].matchingIndex);
+                    records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[s2Id].eRecord,
+                        this.RECORD_STRING + encryptedDict[s2Id].matchingIndex));
+                    decryptedMap.set(ids[i], s2);
+
+                    delete shares[s2Id];
+                    break;
+
+                } catch (e) {
+                    malformed.push({
+                        error: e,
+                        id: shareId,
+                    });
+                }
+            }
+            delete shares[ids[0]];
+        }
+
+        return {
+            malformed,
+            records,
+        };
+    }
+
+    private deriveValues(randId: Uint8Array): IDerivedValues {
+
+        try {
+            const a: Uint8Array = this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 1, 'slope derivation', randId);
+            const k: Uint8Array = this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 2, 'key derivation', randId);
+            const ak: Uint8Array = this.sodium.crypto_generichash(
+                this.KEY_BYTES,
+                this.sodium.to_base64(a) + this.sodium.to_base64(k)
+            );
+            const matchingIndex: string = this.sodium.to_base64(
+                this.sodium.crypto_kdf_derive_from_key(this.KEY_BYTES, 3, 'matching index derivation', ak)
+            );
+
+            const slope: bigInt.BigInteger = bigInt(this.bytesToString(a));
+            return {
+                k,
+                matchingIndex,
+                slope,
+            };
+        } catch (e) {
+            throw new Error('Key derivation failure');
+        }
+
     }
 
     /**
@@ -149,96 +350,36 @@ export class umbral {
      * @param encryptedData
      */
     private checkMatches(encryptedData): IMalformed[] {
-        let malformed: IMalformed[] = [];
-        let matchingDict: Object = {};
+        const malformed: IMalformed[] = [];
+        const matchingDict = {};
 
         if (encryptedData.length < 2) {
             return [{
+                error: 'Decryption requires at least 2 matches',
                 id: '',
-                error: 'Decryption requires at least 2 matches'
             }];
         }
 
-        const m = encryptedData[0].matchingIndex;
-
-        for (var i = 0; i < encryptedData.length; i++) {
-            let index = encryptedData[i].matchingIndex;
+        for (const eData of encryptedData) {
+            const index = eData.matchingIndex;
 
             if (index in matchingDict) {
-                matchingDict[index].push(encryptedData[i].id);
+                matchingDict[index].push(eData.id);
             } else {
-                matchingDict[index] = [encryptedData[i].id];
+                matchingDict[index] = [eData.id];
             }
         }
 
-        for (let index in matchingDict) {
+        for (const index in matchingDict) {
             if (matchingDict[index].length === 1) {
                 malformed.push({
+                    error: 'Matching index does not match with other shares',
                     id: matchingDict[index][0],
-                    error: 'Matching index does not match with other shares'
-                })
+                });
             }
         }
         return malformed;
     }
-
-    /**
-     * Decrypts a user's record for editing purposes
-     * @param {Uint8Array} userPassPhrase - original passphrase used to encrypt the record key
-     * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
-     * @returns {IRecord[]} an array of decrypted records (should contain same content)
-     */
-    public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]): IDecryptedData {
-
-        // NOTE: is it necessary to do this for ALL oc keys?
-        const records: IRecord[] = [];
-        const malformed: IMalformed[] = [];
-
-        for (let i in userEncryptedData) {
-            const eUser = userEncryptedData[i].eUser;
-
-            try {
-                const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser,
-                    this.USER_EDIT_STRING + userEncryptedData[i].matchingIndex);
-                records.push(this.decryptRecord(this.sodium.from_base64(recordKey), userEncryptedData[i].eRecord,
-                    this.RECORD_STRING + userEncryptedData[i].matchingIndex));
-
-            } catch (e) {
-                malformed.push({
-                    id: userEncryptedData[i].id,
-                    error: e,
-                });
-            }
-        }
-        return {records, malformed}
-    }
-
-    /**
-     *
-     * @param {Uint8Array} userPassPhrase - original passphrase used to encrypt the record key
-     * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
-     * @param {IRecord} updatedRecord - a user's updated record
-     * @returns {IEncryptedData[]} an array of encrypted data containing the cipher text of the updated record
-     */
-    public updateUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[], updatedRecord: IRecord): IMalformed[] {
-        let malformed: IMalformed[] = [];
-
-        for (let i in userEncryptedData) {
-            const eUser = userEncryptedData[i].eUser;
-            try {
-                const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser, this.USER_EDIT_STRING + userEncryptedData[i].matchingIndex);
-                userEncryptedData[i].eRecord = this.symmetricEncrypt(this.sodium.from_base64(recordKey), JSON.stringify(updatedRecord), this.RECORD_STRING + userEncryptedData[i].matchingIndex);
-            } catch (e) {
-                malformed.push({
-                    id: userEncryptedData[i].id,
-                    error: e
-                });
-
-            }
-        }
-        return malformed;
-    }
-
 
     private interpolateShares(s1: IShare, s2: IShare): Uint8Array {
 
@@ -247,114 +388,6 @@ export class umbral {
 
         return this.stringToBytes(intercept.toString());
 
-    }
-
-    /**
-     * Decrypts an array of encrypted data
-     * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
-     * @param {Uint8Array} skOC - secret key of an options counselor
-     * @param {Uint8Array[]} pkUser - user's public key
-     * @returns {IRecord[]} array of decrypted records from matched users
-     */
-    public decryptData(encryptedData: IEncryptedData[], skOC: Uint8Array, pkOC: Uint8Array): IDecryptedData {
-
-        let malformed: IMalformed[] = this.checkMatches(encryptedData);
-
-        if (malformed.length === encryptedData.length) {
-            return {
-                records: [],
-                malformed
-            }
-        }
-
-        let shares: object = {};
-        let records: IRecord[] = [];
-
-        for (let i in encryptedData) {
-            try {
-                let id = encryptedData[i].id;
-                shares[id] = this.asymmetricDecrypt(encryptedData[i], skOC, pkOC);
-            } catch (e) {
-                malformed.push({
-                    id: encryptedData[i].id,
-                    error: e
-                });
-            }
-        }
-
-        if (encryptedData.length < 2) return {records, malformed};
-
-        let encryptedDict: object = {};
-        for (let i = 0; i < encryptedData.length; i++) {
-            var id = encryptedData[i].id;
-            encryptedDict[id] = encryptedData[i];
-        }
-
-        const decryptedDict: object = {};
-        while (Object.keys(shares).length > 0) {
-
-
-            let ids = Object.keys(shares);
-            let shareId = ids[0];
-            let share = shares[ids[0]];
-
-            for (var id in decryptedDict) {
-                try {
-                    const s2: IShare = decryptedDict[id];
-                    const k: Uint8Array = this.interpolateShares(share, s2);
-                    const recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey,
-                        this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
-                    records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord,
-                        this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
-
-                    decryptedDict[shareId] = share;
-                    break;
-
-                } catch (e) {
-                    // TODO Handle error
-                }
-
-            }
-
-            for (let i = 1; i < ids.length; i++) {
-                try {
-                    const s2: IShare = shares[ids[i]];
-                    const s2Id: string = ids[i];
-                    const k: Uint8Array = this.interpolateShares(share, s2);
-
-                    // decrypt share 1
-                    let recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey,
-                        this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
-
-                    records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord,
-                        this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
-
-                    decryptedDict[shareId] = share;
-
-                    // decrypt share 2
-                    recordKey = this.symmetricDecrypt(k, s2.eRecordKey,
-                        this.RECORD_KEY_STRING + encryptedDict[s2Id].matchingIndex);
-                    records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[s2Id].eRecord,
-                        this.RECORD_STRING + encryptedDict[s2Id].matchingIndex));
-                    decryptedDict[ids[i]] = s2;
-
-                    delete shares[s2Id];
-                    break;
-
-                } catch (e) {
-                    malformed.push({
-                        error: e,
-                        id: shareId,
-                    });
-                }
-            }
-            delete shares[ids[0]];
-        }
-
-        return {
-            malformed,
-            records,
-        };
     }
 
     /**
@@ -458,7 +491,6 @@ export class umbral {
     private asymmetricEncrypt(message: string, pkOC: Uint8Array): string {
 
         try {
-            const nonce: Uint8Array = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
             const cT: Uint8Array = this.sodium.crypto_box_seal(message, pkOC);
             return this.sodium.to_base64(cT);
         } catch (e) {

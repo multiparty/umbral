@@ -4,7 +4,8 @@
   "main": "dist/umbral.js",
   "types": "dist/umbral.d.ts",
   "scripts": {
-    "test": "nyc mocha -r ts-node/register -r source-map-support/register test/umbral.spec.ts"
+    "build": "tsc",
+    "test": "tslint -c tslint.json --project tsconfig.json && nyc mocha -r ts-node/register -r source-map-support/register test/umbral.spec.ts"
   },
   "nyc": {
     "extension": [
@@ -14,11 +15,7 @@
       "**/*.d.ts",
       "**/*.js",
       "**/*.spec.ts"
-    ],
-    "report": [
-      "html"
-    ],
-    "all": true
+    ]
   },
   "dependencies": {
     "big-integer": "^1.6.30",
