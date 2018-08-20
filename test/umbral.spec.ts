@@ -1,44 +1,43 @@
-import { umbral, IEncryptedData, IMalformed, IDecryptedData, IRecord } from '../src/umbral';
+import { Umbral, IEncryptedData, IMalformed, IDecryptedData, IRecord } from '../src/umbral';
 import { expect } from 'chai';
 import { OPRF, IMaskedData } from 'oprf';
 
 var _sodium = require('libsodium-wrappers-sumo');
 
 
-
 function getRandom(max: number): number {
-  return Math.floor(Math.random() * Math.floor(max));
+    return Math.floor(Math.random() * Math.floor(max));
 }
 
 function createName(): string {
-  
-  const alphabet: string[] = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
-                              "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-  let name: string = "";
-  for (let i: number = 0; i < getRandom(128); i++) {
-      const index: number = getRandom(alphabet.length);
-      name += alphabet[index];
+
+    const alphabet: string[] = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+        "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+    let name: string = "";
+    for (let i: number = 0; i < getRandom(128); i++) {
+        const index: number = getRandom(alphabet.length);
+        name += alphabet[index];
     }
 
-  if (name === "") {
-      name = "XXXXXX";
+    if (name === "") {
+        name = "XXXXXX";
     }
-  return name;
+    return name;
 }
 
 // TODO: perform 2 OPRF's and mimic 2 servers
 
 function performOPRF(input: string): Uint8Array {
-  const oprf = new OPRF(_sodium);
-  const sk = oprf.generateRandomScalar();
-  const masked: IMaskedData = oprf.maskInput(input);
-  const salted: number[] = oprf.saltInput(masked.point, sk);
-  const unmasked = oprf.unmaskInput(salted, masked.mask);
+    const oprf = new OPRF(_sodium);
+    const sk = oprf.generateRandomScalar();
+    const masked: IMaskedData = oprf.maskInput(input);
+    const salted: number[] = oprf.scalarMult(masked.point, sk);
+    const unmasked = oprf.unmaskInput(salted, masked.mask);
 
-  return new Uint8Array(unmasked);
+    return new Uint8Array(unmasked);
 }
 
-function decryptSuccessTest(_umbral: umbral, aDict: { [id: string] : IEncryptedData[]; }, bDict: { [id: string] : IEncryptedData[]; }, privKey, pubKey, perpId): void {
+function decryptSuccessTest(_umbral: Umbral, aDict: { [id: string] : IEncryptedData[]; }, bDict: { [id: string] : IEncryptedData[]; }, privKey, pubKey, perpId): void {
   
   // each perpId
   for (let key in aDict) {
@@ -71,7 +70,7 @@ describe('End-to-end tests', () => {
   
   it('Basic example with 1 OC, 2 matched users', async function() {
     await _sodium.ready;
-    const _umbral = new umbral(_sodium);
+    const _umbral = new Umbral(_sodium);
 
     const ocKeyPair = _sodium.crypto_box_keypair();
     const userKeyPair = _sodium.crypto_box_keypair();
@@ -82,10 +81,10 @@ describe('End-to-end tests', () => {
 
     let encryptedDict: { [id: string] : IEncryptedData[]; } = {};
 
-    updateDict(encryptedDict, _umbral.encryptData([randId], { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey));
+    // updateDict(encryptedDict, _umbral.encryptData([randId], { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey));
     // const encryptedDataB = _umbral.encryptData([randId], { perpId, userId: userId+userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
 
-    console.log(encryptedDict);
+    // console.log(encryptedDict);
     // decryptSuccessTest(_umbral, encryptedDataA, encryptedDataB, ocKeyPair.privateKey, ocKeyPair.publicKey, perpId);  
   });
 
@@ -177,8 +176,11 @@ describe('End-to-end tests', () => {
 //     }
 //   });
 
+//             expect(decrypted.records[0].perpId).to.equal(decrypted.records[1].perpId).to.equal(perpId);
+//             expect(decrypted.records[1].userId).to.equal(userId);
+//             expect(decrypted.malformed.length).to.equal(0);
 
-//   it('Multiple perpIds', async function() {
+// //   it('Multiple perpIds', async function() {
 //     await _sodium.ready;
 //     const _umbral = new umbral(_sodium);
 
@@ -229,6 +231,9 @@ describe('End-to-end tests', () => {
 //       userId = userId + userId;
 //       let encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
 
+    it('Multiple perpIds and multiple OCs', async function () {
+        await _sodium.ready;
+        const _umbral = new Umbral(_sodium);
 
 //       for (var j = 0; j < ocNum; j++) {
 //         let decrypted = _umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], ocPubKeys[i]);
@@ -285,6 +290,8 @@ describe('End-to-end tests', () => {
 //     const randIdA: Uint8Array = performOPRF(perpId);
 //     const randIdB: Uint8Array = performOPRF(perpId + perpId);
 
+        const ocKeyPair = _sodium.crypto_box_keypair();
+        const userKeyPair = _sodium.crypto_box_keypair();
 
 //     const encryptedDataA = _umbral.encryptData(randIdA, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
 //     userId = userId + userId;
@@ -297,7 +304,11 @@ describe('End-to-end tests', () => {
 
 //   });
 
+    });
 
+    it('Incorrect match found', async function () {
+        await _sodium.ready;
+        const _umbral = new Umbral(_sodium);
 
 //   it('Asymmetric encryption failure', async function() {
 
@@ -369,6 +380,9 @@ describe('End-to-end tests', () => {
 //     expect(decrypted.malformed.length).to.equal(1);    
 //   });
 
+        // const perpId = createName();
+        // let userId = createName();
+        // const randId: Uint8Array = performOPRF(perpId);
 
 //   it('3 malformed shares', async function() {
 
@@ -404,6 +418,37 @@ describe('End-to-end tests', () => {
 //    */
 // });
 
+    //     const encryptedDataA = _umbral.encryptData(performOPRF(perpId), {
+    //         perpId,
+    //         userId
+    //     }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    //     const encryptedDataB = _umbral.encryptData(performOPRF(perpId + perpId), {
+    //         perpId,
+    //         userId
+    //     }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    //     const encryptedDataC = _umbral.encryptData(performOPRF(perpId + perpId + perpId), {
+    //         perpId,
+    //         userId
+    //     }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+
+    //     const decrypted = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0], encryptedDataC[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
+
+    //     expect(decrypted.malformed.length).to.equal(3);
+    //     expect(decrypted.records.length).to.equal(0);
+    // });
+
+    /**
+     * TODO:
+     * -Decryption succeeds but authentication of matching index fails
+     * -User edits record
+     * -Check algorithm for interpolation:
+     *  -A can't decrypt, BC can
+     *  -No one can decrypt -> get back all shares in malformed array
+     *  -ABC can decrypt, CD can cdecrypt
+     * -New stress test with random number of entries per perp and randomly select malformed shares to include in data
+     *
+     */
+});
 
 
 // describe('User editing', () => {
@@ -453,6 +498,7 @@ describe('End-to-end tests', () => {
   
 //     expect(decrypted.records[0].perpId).to.equal(newPerpId);
 
+        // expect(decrypted.records[0].perpId).to.equal(newPerpId);
 
 //   });
 });

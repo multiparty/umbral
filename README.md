@@ -1,5 +1,5 @@
 # Umbral
-[![Build Status](https://travis-ci.org/multiparty/umbral.svg?branch=master)](https://travis-ci.org/multiparty/umbral)
+[![npm version](https://badge.fury.io/js/umbral.svg)](https://badge.fury.io/js/umbral)[![Build Status](https://travis-ci.org/multiparty/umbral.svg?branch=master)](https://travis-ci.org/multiparty/umbral)
 
 ### Installation
 ```npm install umbral```
