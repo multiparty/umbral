@@ -58,98 +58,6 @@ export class Umbral {
         this.sodium = sodium;
     }
 
-<<<<<<< HEAD
-  }
-
-   /**
-    * Encrypts a user's record
-    * @param {Uint8Array} randId - random ID (pHat)
-    * @param {IRecord} record - user record
-    * @param {Uint8Array[]} pkOCs - options counselor public keys
-    * @param {Uint8Array} skUser - user's secret key
-    * @returns {IEncryptedData[]} an array of records encrypted under each public key
-    */
-  public encryptData(randIds: Uint8Array[], record: IRecord, pkOCs: Uint8Array[], userPassPhrase: Uint8Array): { [id: string] : IEncryptedData[]; } {
-    if (pkOCs.length < 1) {
-      throw new Error('No OC public key provided');
-    }
-
-    var encryptedDict: { [id: string] : IEncryptedData[]; } = {};
-    
-    for (let i = 0; i < randIds.length; i++) {
-      try {
-        const randId: Uint8Array = randIds[i];
-        const derived: IDerivedValues = this.deriveValues(randId);
-        const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(this.sodium.crypto_generichash(this.KEY_BYTES, record.userId)), this.HEX);
-        const kStr: string = this.bytesToString(derived.k);
-        const s: bigInt.BigInteger = (derived.slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
-        const recordKey: Uint8Array = this.sodium.crypto_secretbox_keygen();
-
-        // TODO: change AD to fixed string concatenated with pi. *make sure they are different so they can't be swapped
-        const eRecordKey: string = this.symmetricEncrypt(derived.k, this.sodium.to_base64(recordKey), this.RECORD_KEY_STRING + derived.matchingIndex);
-        const eUser: string = this.symmetricEncrypt(userPassPhrase, this.sodium.to_base64(recordKey), this.USER_EDIT_STRING + derived.matchingIndex);
-        
-        const msg: IShare = { 
-          x: U, 
-          y: s, 
-          eRecordKey };
-
-        let encryptedData: IEncryptedData[] = [];
-
-        const eRecord: string = this.symmetricEncrypt(recordKey, JSON.stringify(record), this.RECORD_STRING + derived.matchingIndex);
-        
-        for (const i in pkOCs) {
-          let eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[i]);
-          const id: string = uuidv4();
-          encryptedData.push({id, matchingIndex: derived.matchingIndex, eOC, eRecord, eUser});
-        }
-
-        encryptedDict[derived.matchingIndex] = encryptedData;
-        // return encryptedData;
-      } catch (e) {
-
-      }
-    }
-
-    return encryptedDict;
-  }  
-
-  /**
-   * Mathematically correct mod over a prime
-   * @param {bigInt.BigInteger} val - input value 
-   * @returns {bigInt.BigInteger}
-   */
-  private realMod(val: bigInt.BigInteger): bigInt.BigInteger {
-    return val.mod(this.PRIME).add(this.PRIME).mod(this.PRIME);
-  }
-
-  /**
-   * Computes a slope using two points
-   * @param {IShare} c1 - 1st coordinate
-   * @param {IShare} c2 - 2nd coordinate
-   * @returns {bigInt.BigInteger} slope value
-   */
-  private deriveSlope(c1: IShare, c2: IShare): bigInt.BigInteger {
-    const top: bigInt.BigInteger = this.realMod(c2.y.minus(c1.y));
-    const bottom: bigInt.BigInteger = this.realMod(c2.x.minus(c1.x));
-
-    return top.multiply(bottom.modInv(this.PRIME)).mod(this.PRIME);
-  }
-
-  /**
-   * Checks that all entries have matching index
-   * @param encryptedData 
-   */
-  private checkMatches(encryptedData): IMalformed[] {
-    let malformed: IMalformed[] = [];
-    let matchingDict: Object = {};
-
-    if (encryptedData.length < 2) {
-      return [{
-        id: '',
-        error: 'Decryption requires at least 2 matches'
-      }];
-=======
     /**
      * Encrypts a user's record
      * @param {Uint8Array} randId - random ID (pHat)
@@ -280,7 +188,6 @@ export class Umbral {
             }
         }
         return malformed;
->>>>>>> f58c7c4ebf688e34d7cd55bb819306b03c81b1de
     }
 
     /**
