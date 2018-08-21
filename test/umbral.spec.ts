@@ -1,4 +1,4 @@
-import { Umbral, IEncryptedData, IMalformed, IDecryptedData, IRecord } from '../src/umbral';
+import { Umbral, IEncryptedData, IMalformed, IKey, IDecryptedData, IRecord } from '../src/umbral';
 import { expect } from 'chai';
 import { OPRF, IMaskedData } from 'oprf';
 
@@ -79,13 +79,12 @@ describe('End-to-end tests', () => {
     let userId = createName();
     const randId: Uint8Array = performOPRF(perpId);
 
-    let encryptedDict: { [id: string] : IEncryptedData[]; } = {};
+
+    const key: IKey = {id: 'oc', key: ocKeyPair.publicKey};
 
     // updateDict(encryptedDict, _umbral.encryptData([randId], { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey));
-    // const encryptedDataB = _umbral.encryptData([randId], { perpId, userId: userId+userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
+    const encryptedDataB = _umbral.encryptData([randId], { perpId, userId: userId+userId }, [key], userKeyPair.privateKey);
 
-    // console.log(encryptedDict);
-    // decryptSuccessTest(_umbral, encryptedDataA, encryptedDataB, ocKeyPair.privateKey, ocKeyPair.publicKey, perpId);  
   });
 
   // it('Basic example with 3 matches', async function() {
