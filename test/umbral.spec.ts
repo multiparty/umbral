@@ -159,23 +159,21 @@ describe('Basic end-to-end tests', () => {
   });
 
       
-  it('Stress test', async function() {
+  it('Stress test with rand number of OCs (up to 10)', async function() {
 
     await _sodium.ready;
     const _umbral = new Umbral(_sodium);
 
     const userKeyPair = _sodium.crypto_box_keypair();
+    const testNum = 50;
 
-    var [publicKeys, privateKeys] = generateKeys(2);
-
-    const testNum = 10;
     for (let i: number = 0; i < testNum; i++){
       let encryptedDict: IEncryptedMap = {};
+      let [publicKeys, privateKeys] = generateKeys(getRandom(10));
 
       let perpId = createRandString();
       let userId = createRandString();
-      let randId: Uint8Array = performOPRF(perpId);
-  
+      let randId: Uint8Array = performOPRF(perpId); 
 
       let encryptedDataA: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId }, publicKeys, userKeyPair.privateKey);
       updateDict(encryptedDict, encryptedDataA);
@@ -189,50 +187,50 @@ describe('Basic end-to-end tests', () => {
       decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
     }
   });
+
+  it('Stress test with rand multiple perp ids (max 3), rand number of OCs (max 3)', async function() {
+
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
+
+    const userKeyPair = _sodium.crypto_box_keypair();
+    const testNum = 10;
+
+    for (let i: number = 0; i < testNum; i++){
+      let encryptedDict: IEncryptedMap = {};
+      let [publicKeys, privateKeys] = generateKeys(getRandom(3));
+
+      let perpId = createRandString();
+      let userId = createRandString();
+
+      let randIds = getRandIds(3);
+
+      let encryptedDataA: IEncryptedMap = _umbral.encryptData(randIds, { perpId, userId }, publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataA);
+  
+      let encryptedDataB: IEncryptedMap = _umbral.encryptData(randIds, { perpId, userId: userId+userId }, publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataB);
+  
+      let encryptedDataC: IEncryptedMap = _umbral.encryptData(randIds, { perpId, userId: userId+userId+userId }, publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataC);  
+   
+      decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
+    }
+  });
 });
 
 
-//   it('Multiple OCs', async function() {
-//     await _sodium.ready;
-//     const _umbral = new umbral(_sodium);
+function getRandIds(n: number): Uint8Array[] {
+  const randIds: Uint8Array[] = [];
 
-//     const ocNum = 5;
-//     let ocPubKeys = [];
-//     let ocPrivKeys = [];
+  for (var i = 0; i < n; i++) {
+    const r = createRandString();
+    randIds.push(performOPRF(r));
+  }
 
-//     for (var i = 0; i < ocNum; i++) {
-//       let key = _sodium.crypto_box_keypair();
+  return randIds;
+}
 
-//       ocPubKeys.push(key.publicKey);
-//       ocPrivKeys.push(key.privateKey);
-//     }
-
-//     const userKeyPair = _sodium.crypto_box_keypair();
-
-//     const perpId: string = createRandString();
-//     const randId: Uint8Array = performOPRF(perpId);
-//     let userId: string = createRandString();
-
-//     const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
-//     userId = userId + userId;
-//     const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, ocPubKeys, userKeyPair.privateKey);
-
-//     // note: highlight data structure necessary to make this work
-//     // callisto database to send entire vector of encrypted data entries or just the entries for a particular OC?
-
-//     // question: what is being fetched by an OC? 
-//     for (var i = 0; i < ocNum; i++) {
-//       const decrypted = _umbral.decryptData([encryptedDataA[i], encryptedDataB[i]], ocPrivKeys[i], ocPubKeys[i]);
-//       expect(decrypted.records[0].perpId).to.equal(decrypted.records[1].perpId).to.equal(perpId);
-//       expect(decrypted.malformed.length).to.equal(0);
-//     }
-//   });
-
-//             expect(decrypted.records[0].perpId).to.equal(decrypted.records[1].perpId).to.equal(perpId);
-//             expect(decrypted.records[1].userId).to.equal(userId);
-//             expect(decrypted.malformed.length).to.equal(0);
-
-// //   it('Multiple perpIds', async function() {
 //     await _sodium.ready;
 //     const _umbral = new umbral(_sodium);
 
