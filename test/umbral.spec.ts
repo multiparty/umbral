@@ -155,62 +155,42 @@ describe('Basic end-to-end tests', () => {
     const encryptedDataC: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId: userId+userId+userId }, publicKeys, userKeyPair.privateKey);
     updateDict(encryptedDict, encryptedDataC);
 
-
     decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
+  });
+
+      
+  it('Stress test', async function() {
+
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
+
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    var [publicKeys, privateKeys] = generateKeys(2);
+
+    const testNum = 10;
+    for (let i: number = 0; i < testNum; i++){
+      let encryptedDict: IEncryptedMap = {};
+
+      let perpId = createRandString();
+      let userId = createRandString();
+      let randId: Uint8Array = performOPRF(perpId);
+  
+
+      let encryptedDataA: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId }, publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataA);
+  
+      let encryptedDataB: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId: userId+userId }, publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataB);
+  
+      let encryptedDataC: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId: userId+userId+userId }, publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataC);  
+   
+      decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
+    }
   });
 });
 
-  // it('Basic example with 3 matches', async function() {
-  //   await _sodium.ready;
-  //   const _umbral = new umbral(_sodium);
-
-  //   const ocKeyPair = _sodium.crypto_box_keypair();
-  //   const userKeyPairA = _sodium.crypto_box_keypair();
-  //   const userKeyPairB = _sodium.crypto_box_keypair();
-  //   const userKeyPairC = _sodium.crypto_box_keypair();
-
-  //   const perpId = createRandString();
-  //   let userId = createRandString();
-  //   const randId: Uint8Array = performOPRF(perpId);
-
-  //   const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairA.privateKey);    
-  //   userId = userId + userId;
-  //   const encryptedDataB = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairB.privateKey);
-  //   userId = userId + userId;
-  //   const encryptedDataC = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPairC.privateKey);
-
-  //   const decrypted = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0], encryptedDataC[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
-  //   expect(decrypted.records[0].perpId).to.equal(decrypted.records[1].perpId).to.equal(perpId);
-  //   expect(decrypted.records[2].userId).to.equal(userId);
-  //   expect(decrypted.malformed.length).to.equal(0);
-  // });
-    
-//   it('Stress test', async function() {
-//     await _sodium.ready;
-//     const _umbral = new umbral(_sodium);
-
-//     const ocKeyPair = _sodium.crypto_box_keypair();
-//     const userKeyPair = _sodium.crypto_box_keypair();
-
-//     const testNum: number = 10;
-//     for (let i: number = 0; i < testNum; i++) {
-//       const perpId: string = createRandString();
-//       const randId: Uint8Array = performOPRF(perpId);
-//       let userId: string = createRandString();
-
-//       const encryptedDataA = _umbral.encryptData(randId, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-
-//       userId = userId + userId;
-//       const encryptedDataB = _umbral.encryptData(randId, { perpId, userId}, [ocKeyPair.publicKey], userKeyPair.privateKey);
-    
-//       const decrypted = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
-
-//       expect(decrypted.records[0].perpId).to.equal(decrypted.records[1].perpId).to.equal(perpId);
-//       expect(decrypted.records[1].userId).to.equal(userId);
-//       expect(decrypted.malformed.length).to.equal(0);
-
-//     }
-//   });
 
 //   it('Multiple OCs', async function() {
 //     await _sodium.ready;
