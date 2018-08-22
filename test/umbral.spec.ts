@@ -272,8 +272,102 @@ describe('Error cases', () => {
     expect(decrypted.malformed.length).to.equal(1);
     expect(decrypted.malformed[0].error).to.equal("Decryption requires at least 2 matches")
   }); 
+
+  it('3 malformed shares', async function() {
+
+    let encryptedDict: IEncryptedMap = {};
+
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
+
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    var [publicKeys, privateKeys] = generateKeys(1);
+
+    const perpId = createRandString();
+    let userId = createRandString();
+    const randIdA: Uint8Array = performOPRF(perpId);
+    const randIdB: Uint8Array = performOPRF(perpId+perpId);
+    const randIdC: Uint8Array = performOPRF(perpId+perpId+perpId);
+
+    updateDict(encryptedDict, _umbral.encryptData([randIdA], { perpId, userId }, publicKeys, userKeyPair.privateKey));
+    updateDict(encryptedDict, _umbral.encryptData([randIdB], { perpId, userId }, publicKeys, userKeyPair.privateKey));
+    updateDict(encryptedDict, _umbral.encryptData([randIdC], { perpId, userId }, publicKeys, userKeyPair.privateKey));
+
+    // shares all have points that cannot be interpolated, manually changing matchingIndex
+    const encrypted: IEncryptedData[] = [];
+    for (let index in encryptedDict) {
+      for (let ocId in encryptedDict[index]) {
+
+        const enc: IEncryptedData = encryptedDict[index][ocId][0];
+        const obj: IEncryptedData = {
+          eOC: enc.eOC,
+          eRecord: enc.eRecord,
+          eUser: enc.eUser,
+          id: enc.id,
+          matchingIndex: 'matching',
+        }
+        encrypted.push(obj);
+      }
+    }
+
+    const ocId = Object.keys(publicKeys)[0];
+    const decrypted: IDecryptedData = _umbral.decryptData(encrypted, publicKeys[ocId], privateKeys[ocId]);
+    expect(decrypted.records.length).to.equal(0);
+    expect(decrypted.malformed.length).to.equal(3);
+  });
+
+  it('2 decrypted shares, 1 malformed', async function() {
+
+    let encryptedDict: IEncryptedMap = {};
+
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
+
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    var [publicKeys, privateKeys] = generateKeys(1);
+
+    const perpId = createRandString();
+    let userId = createRandString();
+    const randIdA: Uint8Array = performOPRF(perpId);
+    const randIdB: Uint8Array = performOPRF(perpId+perpId);
+
+    updateDict(encryptedDict, _umbral.encryptData([randIdA], { perpId, userId }, publicKeys, userKeyPair.privateKey));
+    updateDict(encryptedDict, _umbral.encryptData([randIdA], { perpId, userId: userId+userId }, publicKeys, userKeyPair.privateKey));
+    updateDict(encryptedDict, _umbral.encryptData([randIdB], { perpId, userId: userId+userId+userId }, publicKeys, userKeyPair.privateKey));
+
+    const encrypted: IEncryptedData[] = retrieveEncrypted(encryptedDict);
+    const ocId = Object.keys(publicKeys)[0];
+    
+    const decrypted: IDecryptedData = _umbral.decryptData(encrypted, publicKeys[ocId], privateKeys[ocId]);
+    expect(decrypted.records.length).to.equal(2);
+    expect(decrypted.records[0].perpId).to.equal(decrypted.records[1].perpId);
+    expect(decrypted.malformed.length).to.equal(1);
+    // TODO: write expect statement for specific error
+  });
 });
 
+
+function retrieveEncrypted(encryptedDict: IEncryptedMap): IEncryptedData[] {
+  let encrypted: IEncryptedData[] = [];
+
+  for (let index in encryptedDict) {
+    for (let oc in encryptedDict[index]) {
+      for (let enc of encryptedDict[index][oc]) {
+        const obj = {
+          eOC: enc.eOC,
+          eRecord: enc.eRecord,
+          eUser: enc.eUser,
+          id: enc.id,
+          matchingIndex: 'matching'
+        }
+        encrypted.push(enc);
+      }
+    }
+  }
+  return encrypted;
+}
 
 //   it('Incorrect match found', async function() {
 //     await _sodium.ready;
