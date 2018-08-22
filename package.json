@@ -5,7 +5,7 @@
   "types": "dist/umbral.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "tslint -c tslint.json --project tsconfig.json && nyc mocha -r ts-node/register -r source-map-support/register test/umbral.spec.ts"
+    "test": "tslint -c tslint.json --project tsconfig.json && nyc mocha --timeout 20000 -r ts-node/register -r source-map-support/register test/umbral.spec.ts"
   },
   "nyc": {
     "extension": [
