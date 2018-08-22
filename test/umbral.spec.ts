@@ -49,6 +49,7 @@ function decryptSuccess(encryptedDict: IEncryptedMap, publicKeys: IKey, privateK
         expect(record.userId).to.equal(user);
         user += userId;
       }
+      expect(decrypted.malformed.length).to.equal(0);
     }
   }
 }
@@ -81,9 +82,32 @@ function generateKeys(n: number) {
   return [publicKeys, privateKeys];
 }
 
-describe('End-to-end tests', () => {
+describe('Basic end-to-end tests', () => {
+  it('1 OCs, 2 matched users', async function() {
+
+    let encryptedDict: IEncryptedMap = {};
+
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
+
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    var [publicKeys, privateKeys] = generateKeys(1);
+
+    const perpId = createRandString();
+    let userId = createRandString();
+    const randId: Uint8Array = performOPRF(perpId);
+
+    const encryptedDataA: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId }, publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataA);
+
+    const encryptedDataB: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId: userId+userId }, publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataB);
+
+    decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
+  });
   
-  it('Basic example with 2 OCs, 2 matched users', async function() {
+  it('2 OCs, 2 matched users', async function() {
 
     let encryptedDict: IEncryptedMap = {};
 
@@ -103,6 +127,34 @@ describe('End-to-end tests', () => {
 
     const encryptedDataB: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId: userId+userId }, publicKeys, userKeyPair.privateKey);
     updateDict(encryptedDict, encryptedDataB);
+
+    decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
+  });
+
+  it('2 OCs, 3 matched users', async function() {
+
+    let encryptedDict: IEncryptedMap = {};
+
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
+
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    var [publicKeys, privateKeys] = generateKeys(2);
+
+    const perpId = createRandString();
+    let userId = createRandString();
+    const randId: Uint8Array = performOPRF(perpId);
+
+    const encryptedDataA: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId }, publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataA);
+
+    const encryptedDataB: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId: userId+userId }, publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataB);
+
+    const encryptedDataC: IEncryptedMap = _umbral.encryptData([randId], { perpId, userId: userId+userId+userId }, publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataC);
+
 
     decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
   });
