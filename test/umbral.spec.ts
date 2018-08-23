@@ -194,16 +194,17 @@ describe('Basic end-to-end tests', () => {
     const _umbral = new Umbral(_sodium);
 
     const userKeyPair = _sodium.crypto_box_keypair();
-    const testNum = 3;
+    const testNum = 100;
 
     for (let i: number = 0; i < testNum; i++){
       let encryptedDict: IEncryptedMap = {};
-      let [publicKeys, privateKeys] = generateKeys(getRandom(2));
+      let [publicKeys, privateKeys] = generateKeys(getRandom(10));
 
       let perpId = createRandString();
       let userId = createRandString();
 
-      let randIds = getRandIds(2);
+      // perp ids
+      let randIds = getRandIds(4);
 
       let encryptedDataA: IEncryptedMap = _umbral.encryptData(randIds, { perpId, userId }, publicKeys, userKeyPair.privateKey);
       updateDict(encryptedDict, encryptedDataA);
