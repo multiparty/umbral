@@ -418,7 +418,48 @@ describe('User editing', () => {
       expect(record.userId).to.equal(userId);
     }
     expect(decrypted.malformed.length).to.equal(0);
-    
+
+  });
+
+
+  it('Updating user record', async function() {
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
+
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    const perpId = createRandString();
+    let userId = createRandString();
+
+    var [publicKeys, privateKeys] = generateKeys(4);
+
+    const randIds: Uint8Array[] = getRandIds(5);
+    const encryptedData: IEncryptedMap = _umbral.encryptData(randIds, { perpId, userId }, publicKeys, userKeyPair.privateKey);
+
+    const encrypted: IEncryptedData[] = [];
+
+    for (let index in encryptedData) {
+      for (let oc in encryptedData[index]) {
+        const record = encryptedData[index][oc][0];
+        encrypted.push(record);
+      }
+    }
+
+    const malformed: IMalformed[] = _umbral.updateUserRecord(userKeyPair.privateKey, encrypted, {
+      perpId: perpId+perpId,
+      userId
+    });
+
+    expect(malformed.length).to.equal(0);
+
+    const decrypted = _umbral.decryptUserRecord(userKeyPair.privateKey, encrypted);
+
+    for (let record of decrypted.records) {
+      expect(record.perpId).to.equal(perpId+perpId);
+      expect(record.userId).to.equal(userId);
+    }
+    expect(decrypted.malformed.length).to.equal(0);
+
   });
 
   // it('Updating user record', async function() {
