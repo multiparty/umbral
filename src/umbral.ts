@@ -87,6 +87,8 @@ export class Umbral {
                      userPassPhrase: Uint8Array): IEncrypted {
 
     const encryptedMap: IEncryptedMap = {};
+    const malformed: IMalformed[] = [];
+    const encrypted: IEncrypted = { encryptedMap, malformed };
     if (Object.keys(pkOCs).length < 1) {
       return {
         encryptedMap: {},
@@ -108,12 +110,9 @@ export class Umbral {
     }
 
     for (const randId of randIds) {
-      this.createEncryptedObject(encryptedMap, randId, record, pkOCs, userPassPhrase);
+      this.createEncryptedObject(encrypted, randId, record, pkOCs, userPassPhrase);
     }
-    return {
-      encryptedMap,
-      malformed: []
-    };
+    return encrypted;
   }
 
   /**
@@ -312,10 +311,10 @@ export class Umbral {
     }
   }
 
-  private createEncryptedObject(encryptedMap: IEncryptedMap,
+  private createEncryptedObject(encrypted: IEncrypted,
                                 randId: Uint8Array,
                                 record: IRecord, pkOCs: IKey,
-                                userPassPhrase: Uint8Array): IEncryptedMap {
+                                userPassPhrase: Uint8Array): void {
     try {
       const derived: IDerivedValues = this.deriveValues(randId);
       const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(
@@ -351,20 +350,21 @@ export class Umbral {
       const recordId: string = uuidv4();
       for (const id of Object.keys(pkOCs)) {
         const eOC = this.asymmetricEncrypt(JSON.stringify(msg), pkOCs[id]);
-        if (!encryptedMap[derived.matchingIndex]) {
-          encryptedMap[derived.matchingIndex] = {};
+        if (!encrypted.encryptedMap[derived.matchingIndex]) {
+          encrypted.encryptedMap[derived.matchingIndex] = {};
         }
-        encryptedMap[derived.matchingIndex][id] = [{eOC,
+        encrypted.encryptedMap[derived.matchingIndex][id] = [{eOC,
                                                         eRecord,
                                                         eUser,
                                                         id: recordId,
                                                         matchingIndex: derived.matchingIndex,
                                                       }];
       }
-      return encryptedMap;
     } catch (e) {
-      throw (e);
-
+      encrypted.malformed.push({
+        error: e,
+        id: 'encryption'
+      });
     }
   }
 
@@ -534,10 +534,6 @@ export class Umbral {
    */
   private asymmetricEncrypt(message: string, pkOC: Uint8Array): string {
     try {
-      if (pkOC.length < this.KEY_BYTES) {
-        console.log(pkOC);
-      }
-      console.log(pkOC.length);
       const cT: Uint8Array = this.sodium.crypto_box_seal(message, pkOC);
       return this.sodium.to_base64(cT);
     } catch (e) {
