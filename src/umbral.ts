@@ -11,6 +11,11 @@ export interface IOCDataMap {
   [OCid: string]: IEncryptedData[];
 }
 
+export interface IEncrypted {
+  readonly encryptedMap: IEncryptedMap;
+  readonly malformed: IMalformed[];
+}
+
 export interface IEncryptedMap {
   [matchingIndex: string]: IOCDataMap;
 }
@@ -79,18 +84,36 @@ export class Umbral {
    * @returns {IEncryptedData[]} an array of records encrypted under each public key
    */
   public encryptData(randIds: Uint8Array[], record: IRecord, pkOCs: IKey,
-                     userPassPhrase: Uint8Array): IEncryptedMap {
+                     userPassPhrase: Uint8Array): IEncrypted {
 
     const encryptedMap: IEncryptedMap = {};
     if (Object.keys(pkOCs).length < 1) {
-      return null;
-      // todo: throw error??
+      return {
+        encryptedMap: {},
+        malformed: [{
+          error: 'No public OC keys provided',
+          id: 'All'
+        }]
+      };
+    }
+
+    if (record.perpId === null || record.perpId === '' || record.userId === null || record.userId === '') {
+      return {
+        encryptedMap: {},
+        malformed: [{
+          error: 'Record is missing information',
+          id: 'All'
+        }]
+      };
     }
 
     for (const randId of randIds) {
       this.createEncryptedObject(encryptedMap, randId, record, pkOCs, userPassPhrase);
     }
-    return encryptedMap;
+    return {
+      encryptedMap,
+      malformed: []
+    };
   }
 
   /**
@@ -340,7 +363,8 @@ export class Umbral {
       }
       return encryptedMap;
     } catch (e) {
-      return encryptedMap;
+      throw (e);
+
     }
   }
 
@@ -510,6 +534,10 @@ export class Umbral {
    */
   private asymmetricEncrypt(message: string, pkOC: Uint8Array): string {
     try {
+      if (pkOC.length < this.KEY_BYTES) {
+        console.log(pkOC);
+      }
+      console.log(pkOC.length);
       const cT: Uint8Array = this.sodium.crypto_box_seal(message, pkOC);
       return this.sodium.to_base64(cT);
     } catch (e) {
