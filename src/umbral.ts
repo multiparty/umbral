@@ -86,27 +86,21 @@ export class Umbral {
   public encryptData(randIds: Uint8Array[], record: IRecord, pkOCs: IKey,
                      userPassPhrase: Uint8Array): IEncrypted {
 
-    const encryptedMap: IEncryptedMap = {};
-    const malformed: IMalformed[] = [];
-    const encrypted: IEncrypted = { encryptedMap, malformed };
+    const encrypted: IEncrypted = { encryptedMap: {}, malformed: [] };
     if (Object.keys(pkOCs).length < 1) {
-      return {
-        encryptedMap: {},
-        malformed: [{
-          error: 'No public OC keys provided',
-          id: 'All'
-        }]
-      };
+      encrypted.malformed.push({
+        error: 'No public OC keys provided',
+        id: 'All'
+      });
+      return encrypted;
     }
 
     if (record.perpId === null || record.perpId === '' || record.userId === null || record.userId === '') {
-      return {
-        encryptedMap: {},
-        malformed: [{
-          error: 'Record is missing information',
-          id: 'All'
-        }]
-      };
+      encrypted.malformed.push({
+        error: 'Record is missing information',
+        id: 'All'
+      });
+      return encrypted;
     }
 
     for (const randId of randIds) {

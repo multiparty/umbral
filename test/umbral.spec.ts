@@ -358,6 +358,29 @@ describe('Error cases', () => {
     }
   });
 
+
+  it('Key derivation failure', async function() {
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
+
+    let encryptedDict: IEncryptedMap = {};
+
+    const [publicKeys, privateKeys] = generateKeys(1);
+
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    const perpId = createRandString();
+    let userId = createRandString();
+
+    const rand = new Uint8Array([10,10,10]);
+
+    const encrypted = _umbral.encryptData([rand], { perpId, userId }, publicKeys, userKeyPair.privateKey);
+
+    expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
+    expect(encrypted.malformed.length).to.equal(1);
+    expect(encrypted.malformed[0].error.toString()).to.contain('Key derivation failure');
+  });
+
   it('Only 1 match provided', async function() {
     let encryptedDict: IEncryptedMap = {};
 
