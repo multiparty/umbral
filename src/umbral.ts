@@ -309,8 +309,8 @@ export class Umbral {
   }
 
   /**
-   * 
-   * @param randId - result of OPRF 
+   * Key derivation
+   * @param randId - result of OPRF
    * @returns {IDerivedValues} object containing key, matching index, and slope
    */
   private deriveValues(randId: Uint8Array): IDerivedValues {
@@ -338,12 +338,12 @@ export class Umbral {
   }
 
   /**
-   * 
-   * @param encrypted 
-   * @param randId 
-   * @param record 
-   * @param pkOCs 
-   * @param userPassPhrase 
+   * Encrypting under a single randId and then updating the encrypted data object
+   * @param encrypted - encrypted data object
+   * @param randId - result of OPRF
+   * @param record - user record
+   * @param pkOCs - dictionary of all OC public keys
+   * @param userPassPhrase - user passphrase
    */
   private createEncryptedObject(encrypted: IEncrypted,
                                 randId: Uint8Array,
