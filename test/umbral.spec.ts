@@ -1,4 +1,4 @@
-import { Umbral, IEncryptedData, IEncrypted, IMalformed, IKey, IDecryptedData, IRecord, IEncryptedMap, IOCDataMap } from '../src/umbral';
+import { Umbral, IEncryptedData, IEncrypted, IMalformed, IKey, IDecrypted, IRecord, IEncryptedMap, IOCDataMap } from '../src/umbral';
 import { expect } from 'chai';
 import { OPRF, IMaskedData } from 'oprf';
 
@@ -402,7 +402,7 @@ describe('Error cases', () => {
     const ocId = Object.keys(publicKeys)[0];
 
     const encrypted: IEncryptedData[] = encryptedDict[matchingIndex][ocId];
-    const decrypted: IDecryptedData = _umbral.decryptData(encrypted, publicKeys[ocId], privateKeys[ocId]);
+    const decrypted: IDecrypted = _umbral.decryptData(encrypted, publicKeys[ocId], privateKeys[ocId]);
     
     expect(decrypted.malformed.length).to.equal(1);
     expect(decrypted.malformed[0].error).to.equal("Decryption requires at least 2 matches")
@@ -434,7 +434,7 @@ describe('Error cases', () => {
     const encrypted: IEncryptedData[] = retrieveEncrypted(encryptedDict);
 
     const ocId = Object.keys(publicKeys)[0];
-    const decrypted: IDecryptedData = _umbral.decryptData(encrypted, publicKeys[ocId], privateKeys[ocId]);
+    const decrypted: IDecrypted = _umbral.decryptData(encrypted, publicKeys[ocId], privateKeys[ocId]);
     expect(decrypted.records.length).to.equal(0);
     expect(decrypted.malformed.length).to.equal(3);
   });
@@ -461,7 +461,7 @@ describe('Error cases', () => {
     const encrypted: IEncryptedData[] = retrieveEncrypted(encryptedDict);
 
     const ocId = Object.keys(publicKeys)[0];
-    const decrypted: IDecryptedData = _umbral.decryptData(encrypted, publicKeys[ocId], privateKeys[ocId]);
+    const decrypted: IDecrypted = _umbral.decryptData(encrypted, publicKeys[ocId], privateKeys[ocId]);
     expect(decrypted.records.length).to.equal(0);
     expect(decrypted.malformed.length).to.equal(1);
     expect(decrypted.malformed[0].error.toString()).to.contain('not co-prime')
@@ -490,7 +490,7 @@ describe('Error cases', () => {
     const encrypted: IEncryptedData[] = retrieveEncrypted(encryptedDict);
     const ocId = Object.keys(publicKeys)[0];
     
-    const decrypted: IDecryptedData = _umbral.decryptData(encrypted, publicKeys[ocId], privateKeys[ocId]);
+    const decrypted: IDecrypted = _umbral.decryptData(encrypted, publicKeys[ocId], privateKeys[ocId]);
     expect(decrypted.records.length).to.equal(2);
     expect(decrypted.records[0].perpId).to.equal(decrypted.records[1].perpId);
     expect(decrypted.malformed.length).to.equal(1);
@@ -570,44 +570,3 @@ describe('User editing', () => {
     expect(decrypted.malformed.length).to.equal(0);
   });
 });
-
-//   it('Incorrect match found', async function() {
-//     await _sodium.ready;
-//     const _umbral = new umbral(_sodium);
-
-//     const ocKeyPair = _sodium.crypto_box_keypair();
-//     const userKeyPair = _sodium.crypto_box_keypair();
-
-//     const perpId = createRandString();
-//     let userId = createRandString();
-//     const randIdA: Uint8Array = performOPRF(perpId);
-//     const randIdB: Uint8Array = performOPRF(perpId + perpId);
-
-        // const ocKeyPair = _sodium.crypto_box_keypair();
-        // const userKeyPair = _sodium.crypto_box_keypair();
-
-//     const encryptedDataA = _umbral.encryptData(randIdA, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-//     userId = userId + userId;
-//     const encryptedDataB = _umbral.encryptData(randIdB, { perpId, userId }, [ocKeyPair.publicKey], userKeyPair.privateKey);
-  
-//     const decrypted = _umbral.decryptData([encryptedDataA[0], encryptedDataB[0]], ocKeyPair.privateKey, ocKeyPair.publicKey);
-
-//     expect(decrypted.malformed.length).to.equal(2);
-//     expect(decrypted.malformed[0].error).to.equal(decrypted.malformed[1].error).to.equal('Matching index does not match with other shares');
-
-//   });
-
-    // });
-
-
-//   /**
-//    * TODO:
-//    * -Decryption succeeds but authentication of matching index fails
-//    * -User edits record
-//    * -Check algorithm for interpolation: 
-//    *  -A can't decrypt, BC can
-//    *  -No one can decrypt -> get back all shares in malformed array
-//    *  -ABC can decrypt, CD can cdecrypt
-//    * 
-//    */
-// });

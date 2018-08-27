@@ -7,19 +7,31 @@ export interface IRecord {
   readonly userId: string;
 }
 
+/**
+ * Mapping of OC id to matching records
+ */
 export interface IOCDataMap {
   [OCid: string]: IEncryptedData[];
 }
 
+/**
+ * Data object returned from encryption workflow
+ */
 export interface IEncrypted {
   readonly encryptedMap: IEncryptedMap;
   readonly malformed: IMalformed[];
 }
 
+/**
+ * Mapping of matching index to all matching records under a specific OC
+ */
 export interface IEncryptedMap {
   [matchingIndex: string]: IOCDataMap;
 }
 
+/**
+ * Encrypted data object
+ */
 export interface IEncryptedData {
   readonly eOC: string; // c
   eRecord: string;
@@ -45,7 +57,7 @@ export interface IMalformed {
   readonly error: string;
 }
 
-export interface IDecryptedData {
+export interface IDecrypted {
   readonly records: IRecord[];
   readonly malformed: IMalformed[]; // ids
 }
@@ -115,7 +127,7 @@ export class Umbral {
    * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
    * @returns {IRecord[]} an array of decrypted records (should contain same content)
    */
-  public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]): IDecryptedData {
+  public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]): IDecrypted {
 
     // NOTE: is it necessary to do this for ALL oc keys?
     const records: IRecord[] = [];
@@ -182,7 +194,7 @@ export class Umbral {
    * @param {Uint8Array[]} pkUser - user's public key
    * @returns {IRecord[]} array of decrypted records from matched users
    */
-  public decryptData(encryptedData: IEncryptedData[], pkOC: Uint8Array, skOC: Uint8Array): IDecryptedData {
+  public decryptData(encryptedData: IEncryptedData[], pkOC: Uint8Array, skOC: Uint8Array): IDecrypted {
 
     const malformed: IMalformed[] = this.checkMatches(encryptedData);
 
