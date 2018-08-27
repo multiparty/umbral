@@ -40,28 +40,43 @@ export interface IEncryptedData {
   readonly matchingIndex: string; // pi
 }
 
+/**
+ * Share used for interpolation
+ */
 interface IShare {
   readonly x: bigInt.BigInteger;
   readonly y: bigInt.BigInteger;
   readonly eRecordKey: string;
 }
 
+/**
+ * Values from key derivation
+ */
 interface IDerivedValues {
   readonly slope: bigInt.BigInteger;
   readonly k: Uint8Array;
   readonly matchingIndex: string;
 }
 
+/**
+ * Object for storing errors
+ */
 export interface IMalformed {
   readonly id: string;
   readonly error: string;
 }
 
+/**
+ * Data returned from decryption workflow
+ */
 export interface IDecrypted {
   readonly records: IRecord[];
   readonly malformed: IMalformed[]; // ids
 }
 
+/**
+ * Dictionary of {id, key}
+ */
 export interface IKey {
   [id: string]: Uint8Array;
 }
@@ -93,7 +108,7 @@ export class Umbral {
    * @param {IRecord} record - user record
    * @param {Uint8Array[]} pkOCs - options counselor public keys
    * @param {Uint8Array} skUser - user's secret key
-   * @returns {IEncryptedData[]} an array of records encrypted under each public key
+   * @returns {IEncrypted} object containing encrypted data and errors
    */
   public encryptData(randIds: Uint8Array[], record: IRecord, pkOCs: IKey,
                      userPassPhrase: Uint8Array): IEncrypted {
@@ -125,7 +140,7 @@ export class Umbral {
    * Decrypts a user's record for editing purposes
    * @param {Uint8Array} userPassPhrase - original passphrase used to encrypt the record key
    * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
-   * @returns {IRecord[]} an array of decrypted records (should contain same content)
+   * @returns {IDecrypted} object containing decrypted records and errors
    */
   public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]): IDecrypted {
 
@@ -190,9 +205,9 @@ export class Umbral {
   /**
    * Decrypts an array of encrypted data
    * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
+   * @param {Uint8Array} pkOC - public key of an options counselor
    * @param {Uint8Array} skOC - secret key of an options counselor
-   * @param {Uint8Array[]} pkUser - user's public key
-   * @returns {IRecord[]} array of decrypted records from matched users
+   * @returns {IDecrypted]} object containing decrypted records and errors
    */
   public decryptData(encryptedData: IEncryptedData[], pkOC: Uint8Array, skOC: Uint8Array): IDecrypted {
 
@@ -293,6 +308,11 @@ export class Umbral {
     };
   }
 
+  /**
+   * 
+   * @param randId - result of OPRF 
+   * @returns {IDerivedValues} object containing key, matching index, and slope
+   */
   private deriveValues(randId: Uint8Array): IDerivedValues {
 
     try {
@@ -317,6 +337,14 @@ export class Umbral {
     }
   }
 
+  /**
+   * 
+   * @param encrypted 
+   * @param randId 
+   * @param record 
+   * @param pkOCs 
+   * @param userPassPhrase 
+   */
   private createEncryptedObject(encrypted: IEncrypted,
                                 randId: Uint8Array,
                                 record: IRecord, pkOCs: IKey,
@@ -445,6 +473,7 @@ export class Umbral {
    * Symmetric decryption
    * @param {Uint8Array} key
    * @param {string} cipherText - in base 64 encoding with a nonce split on ("$")
+   * @param {string} ad - additional data associated with ciphertext
    * @return {Uint8Array} decrypted data
    */
   private symmetricDecrypt(key: Uint8Array, cipherText: string, ad: string): Uint8Array {
@@ -468,6 +497,7 @@ export class Umbral {
    * Decrypts a single record
    * @param {Uint8Array} recordKey
    * @param {string} eRecord
+   * @param {string} ad - additional data associated with ciphertext
    * @returns {IRecord} decrypted record
    */
   private decryptRecord(recordKey: Uint8Array, eRecord, ad: string): IRecord {
@@ -535,7 +565,6 @@ export class Umbral {
    * Asymmetric encryption
    * @param {string} message - a plaintext string
    * @param {Uint8Array} pkOC - the public key of an options counselor
-   * @param {Uint8Array} skUser - secret key of a user
    * @returns {string} encrypted string in base 64 encoding
    */
   private asymmetricEncrypt(message: string, pkOC: Uint8Array): string {
@@ -551,6 +580,7 @@ export class Umbral {
    * Symmetric encryption
    * @param {Uint8Array} key
    * @param {string} msg plaintext string
+   * @param {string} ad - additional data associated with ciphertext
    * @returns {string} encrypted string in base 64 encoding
    */
   private symmetricEncrypt(key: Uint8Array, msg: string, ad: string): string {
