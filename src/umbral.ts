@@ -8,28 +8,6 @@ export interface IRecord {
 }
 
 /**
- * Mapping of OC id to matching records
- */
-export interface IOCDataMap {
-  [OCid: string]: IEncryptedData[];
-}
-
-/**
- * Data object returned from encryption workflow
- */
-export interface IEncrypted {
-  readonly encryptedMap: IEncryptedMap;
-  readonly malformed: IMalformed[];
-}
-
-/**
- * Mapping of matching index to all matching records under a specific OC
- */
-export interface IEncryptedMap {
-  [matchingIndex: string]: IOCDataMap;
-}
-
-/**
  * Encrypted data object
  */
 export interface IEncryptedData {
@@ -41,21 +19,25 @@ export interface IEncryptedData {
 }
 
 /**
- * Share used for interpolation
+ * Mapping of OC id to matching records
  */
-interface IShare {
-  readonly x: bigInt.BigInteger;
-  readonly y: bigInt.BigInteger;
-  readonly eRecordKey: string;
+export interface IOCDataMap {
+  [OCid: string]: IEncryptedData[];
 }
 
 /**
- * Values from key derivation
+ * Mapping of matching index to all matching records under a specific OC
  */
-interface IDerivedValues {
-  readonly slope: bigInt.BigInteger;
-  readonly k: Uint8Array;
-  readonly matchingIndex: string;
+export interface IEncryptedMap {
+  [matchingIndex: string]: IOCDataMap;
+}
+
+/**
+ * Data object returned from encryption workflow
+ */
+export interface IEncrypted {
+  readonly encryptedMap: IEncryptedMap;
+  readonly malformed: IMalformed[];
 }
 
 /**
@@ -81,6 +63,24 @@ export interface IKey {
   [id: string]: Uint8Array;
 }
 
+/**
+ * Share used for interpolation
+ */
+interface IShare {
+  readonly x: bigInt.BigInteger;
+  readonly y: bigInt.BigInteger;
+  readonly eRecordKey: string;
+}
+
+/**
+ * Values from key derivation
+ */
+interface IDerivedValues {
+  readonly slope: bigInt.BigInteger;
+  readonly k: Uint8Array;
+  readonly matchingIndex: string;
+}
+
 export class Umbral {
   private sodium = null;
 
@@ -103,11 +103,11 @@ export class Umbral {
   }
 
   /**
-   * Encrypts a user's record
-   * @param {Uint8Array} randId - random ID (pHat)
-   * @param {IRecord} record - user record
-   * @param {Uint8Array[]} pkOCs - options counselor public keys
-   * @param {Uint8Array} skUser - user's secret key
+   * Encryption workflow
+   * @param randIds - array of all randIds corresponding to each perpId submitted
+   * @param record - user's record
+   * @param pkOCs - dictionary of all OC public keys
+   * @param userPassPhrase - user's passphrase for use in encrypting for editing
    * @returns {IEncrypted} object containing encrypted data and errors
    */
   public encryptData(randIds: Uint8Array[], record: IRecord, pkOCs: IKey,
@@ -138,7 +138,7 @@ export class Umbral {
 
   /**
    * Decrypts a user's record for editing purposes
-   * @param {Uint8Array} userPassPhrase - original passphrase used to encrypt the record key
+   * @param userPassPhrase - original passphrase used to encrypt the record key
    * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
    * @returns {IDecrypted} object containing decrypted records and errors
    */
@@ -168,9 +168,9 @@ export class Umbral {
 
   /**
    *
-   * @param {Uint8Array} userPassPhrase - original passphrase used to encrypt the record key
+   * @param userPassPhrase - original passphrase used to encrypt the record key
    * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
-   * @param {IRecord} updatedRecord - a user's updated record
+   * @param updatedRecord - a user's updated record
    * @returns {IEncryptedData[]} an array of encrypted data containing the cipher text of the updated record
    */
   public updateUserRecord(userPassPhrase: Uint8Array,
@@ -205,8 +205,8 @@ export class Umbral {
   /**
    * Decrypts an array of encrypted data
    * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
-   * @param {Uint8Array} pkOC - public key of an options counselor
-   * @param {Uint8Array} skOC - secret key of an options counselor
+   * @param pkOC - public key of an options counselor
+   * @param skOC - secret key of an options counselor
    * @returns {IDecrypted]} object containing decrypted records and errors
    */
   public decryptData(encryptedData: IEncryptedData[], pkOC: Uint8Array, skOC: Uint8Array): IDecrypted {
@@ -471,10 +471,10 @@ export class Umbral {
 
   /**
    * Symmetric decryption
-   * @param {Uint8Array} key
+   * @param key
    * @param {string} cipherText - in base 64 encoding with a nonce split on ("$")
    * @param {string} ad - additional data associated with ciphertext
-   * @return {Uint8Array} decrypted data
+   * @return decrypted data
    */
   private symmetricDecrypt(key: Uint8Array, cipherText: string, ad: string): Uint8Array {
     try {
@@ -495,10 +495,10 @@ export class Umbral {
 
   /**
    * Decrypts a single record
-   * @param {Uint8Array} recordKey
+   * @param recordKey
    * @param {string} eRecord
    * @param {string} ad - additional data associated with ciphertext
-   * @returns {IRecord} decrypted record
+   * @returns decrypted record
    */
   private decryptRecord(recordKey: Uint8Array, eRecord, ad: string): IRecord {
     const decryptedRecord: Uint8Array = this.symmetricDecrypt(recordKey, eRecord, ad);
@@ -541,8 +541,8 @@ export class Umbral {
   /**
    * Asymmetric decryption
    * @param {IEncryptedData} encryptedData
-   * @param {Uint8Array} skOC - secret key of an options counselor
-   * @param {Uint8Array} pkUser - public key of a user
+   * @param skOC - secret key of an options counselor
+   * @param pkUser - public key of a user
    * @returns {IShare} a decrypted coordinate
    */
   private asymmetricDecrypt(encryptedData: IEncryptedData, skOC: Uint8Array, pkOC: Uint8Array): IShare {
@@ -564,7 +564,7 @@ export class Umbral {
   /**
    * Asymmetric encryption
    * @param {string} message - a plaintext string
-   * @param {Uint8Array} pkOC - the public key of an options counselor
+   * @param pkOC - the public key of an options counselor
    * @returns {string} encrypted string in base 64 encoding
    */
   private asymmetricEncrypt(message: string, pkOC: Uint8Array): string {
@@ -578,7 +578,7 @@ export class Umbral {
 
   /**
    * Symmetric encryption
-   * @param {Uint8Array} key
+   * @param key
    * @param {string} msg plaintext string
    * @param {string} ad - additional data associated with ciphertext
    * @returns {string} encrypted string in base 64 encoding
@@ -599,7 +599,7 @@ export class Umbral {
 
   /**
    * Converts bytes to their string representation of a number
-   * @param {Uint8Array} bytes
+   * @param bytes
    * @returns {string}
    */
   private bytesToString(bytes: Uint8Array): string {
