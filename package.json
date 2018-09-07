@@ -5,7 +5,8 @@
   "types": "dist/umbral.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "tslint -c tslint.json --project tsconfig.json && nyc mocha --timeout 200000 -r ts-node/register -r source-map-support/register test/umbral.spec.ts"
+    "test": "tslint -c tslint.json --project tsconfig.json && nyc mocha --timeout 200000 -r ts-node/register -r source-map-support/register test/umbral.spec.ts",
+    "coveralls": "npm test && nyc report --reporter=text-lcov | ./node_modules/coveralls/bin/coveralls.js"
   },
   "nyc": {
     "extension": [
@@ -29,6 +30,7 @@
     "@types/mocha": "^5.2.1",
     "@types/node": "^10.3.2",
     "chai": "^4.1.2",
+    "coveralls": "^3.0.2",
     "jsdoc": "^3.5.5",
     "libsodium-wrappers-sumo": "^0.7.3",
     "mocha": "^5.2.0",
