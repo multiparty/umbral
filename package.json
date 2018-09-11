@@ -1,8 +1,11 @@
 {
   "name": "umbral",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "main": "dist/umbral.js",
   "types": "dist/umbral.d.ts",
+  "files": [
+    "/dist"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "tslint -c tslint.json --project tsconfig.json && nyc mocha --timeout 200000 -r ts-node/register -r source-map-support/register test/umbral.spec.ts",
@@ -21,7 +24,7 @@
   "dependencies": {
     "big-integer": "^1.6.30",
     "encoding": "^0.1.12",
-    "oprf": "0.0.13",
+    "oprf": "0.9.0",
     "text-encoding": "^0.6.4",
     "uuid": "^3.3.2"
   },
