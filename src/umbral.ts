@@ -5,6 +5,7 @@ import uuidv4 = require('uuid/v4');
 export interface IRecord {
   readonly perpId: string;
   readonly userId: string;
+  readonly data: string;
 }
 
 /**
