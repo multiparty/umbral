@@ -155,224 +155,224 @@ describe('Basic end-to-end tests', () => {
     
     decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
   });
-});
+
   
-//   it('2 OCs, 2 matched users', async function() {
+  it('2 OCs, 2 matched users', async function() {
 
-//     let encryptedDict: IEncryptedMap = {};
+    let encryptedDict: IEncryptedMap = {};
 
-//     await _sodium.ready;
-//     const _umbral = new Umbral(_sodium);
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
 
-//     const userKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
 
-//     var [publicKeys, privateKeys] = generateKeys(2);
+    var [publicKeys, privateKeys] = generateKeys(2);
 
-//     const perpId = createRandString();
-//     let userId = createRandString();
-//     const randId: Uint8Array = performOPRF(perpId);
+    const perpId = createRandString();
+    let userId = createRandString();
+    const randId: Uint8Array = performOPRF(perpId);
 
-//     const encryptedDataA: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId }), publicKeys, userKeyPair.privateKey);
-//     updateDict(encryptedDict, encryptedDataA.encryptedMap);
+    const encryptedDataA: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId }), publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataA.encryptedMap);
 
-//     const encryptedDataB: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId: userId+userId }), publicKeys, userKeyPair.privateKey);
-//     updateDict(encryptedDict, encryptedDataB.encryptedMap);
+    const encryptedDataB: IEncrypted = _umbral.encryptData([randId], userId + userId, JSON.stringify({ perpId, userId: userId+userId }), publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataB.encryptedMap);
 
-//     expect(encryptedDataA.malformed.length).to.equal(0);
-//     expect(encryptedDataB.malformed.length).to.equal(0);
-//     decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
-//   });
+    expect(encryptedDataA.malformed.length).to.equal(0);
+    expect(encryptedDataB.malformed.length).to.equal(0);
+    decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
+  });
 
-//   it('2 OCs, 3 matched users', async function() {
+  it('2 OCs, 3 matched users', async function() {
 
-//     let encryptedDict: IEncryptedMap = {};
+    let encryptedDict: IEncryptedMap = {};
 
-//     await _sodium.ready;
-//     const _umbral = new Umbral(_sodium);
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
 
-//     const userKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
 
-//     var [publicKeys, privateKeys] = generateKeys(2);
+    var [publicKeys, privateKeys] = generateKeys(2);
 
-//     const perpId = createRandString();
-//     let userId = createRandString();
-//     const randId: Uint8Array = performOPRF(perpId);
+    const perpId = createRandString();
+    let userId = createRandString();
+    const randId: Uint8Array = performOPRF(perpId);
 
-//     const encryptedDataA: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId }), publicKeys, userKeyPair.privateKey);
-//     updateDict(encryptedDict, encryptedDataA.encryptedMap);
+    const encryptedDataA: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId }), publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataA.encryptedMap);
 
-//     const encryptedDataB: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId: userId+userId }), publicKeys, userKeyPair.privateKey);
-//     updateDict(encryptedDict, encryptedDataB.encryptedMap);
+    const encryptedDataB: IEncrypted = _umbral.encryptData([randId], userId+userId, JSON.stringify({ perpId, userId: userId+userId }), publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataB.encryptedMap);
 
-//     const encryptedDataC: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId: userId+userId+userId }), publicKeys, userKeyPair.privateKey);
-//     updateDict(encryptedDict, encryptedDataC.encryptedMap);
+    const encryptedDataC: IEncrypted = _umbral.encryptData([randId], userId+userId+userId, JSON.stringify({ perpId, userId: userId+userId+userId }), publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataC.encryptedMap);
 
-//     expect(encryptedDataA.malformed.length).to.equal(0);
-//     expect(encryptedDataB.malformed.length).to.equal(0);
-//     expect(encryptedDataC.malformed.length).to.equal(0);
-//     decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
-//   });
+    expect(encryptedDataA.malformed.length).to.equal(0);
+    expect(encryptedDataB.malformed.length).to.equal(0);
+    expect(encryptedDataC.malformed.length).to.equal(0);
+    decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
+  });
 
       
-//   it('Stress test with rand number of OCs (up to 10)', async function() {
+  it('Stress test with rand number of OCs (up to 10)', async function() {
 
-//     await _sodium.ready;
-//     const _umbral = new Umbral(_sodium);
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
 
-//     const userKeyPair = _sodium.crypto_box_keypair();
-//     const testNum = 50;
+    const userKeyPair = _sodium.crypto_box_keypair();
+    const testNum = 50;
 
-//     for (let i: number = 0; i < testNum; i++){
-//       let encryptedDict: IEncryptedMap = {};
-//       let [publicKeys, privateKeys] = generateKeys(getRandom(10));
+    for (let i: number = 0; i < testNum; i++){
+      let encryptedDict: IEncryptedMap = {};
+      let [publicKeys, privateKeys] = generateKeys(getRandom(10));
 
-//       let perpId = createRandString();
-//       let userId = createRandString();
-//       let randId: Uint8Array = performOPRF(perpId); 
+      let perpId = createRandString();
+      let userId = createRandString();
+      let randId: Uint8Array = performOPRF(perpId); 
 
-//       let encryptedDataA: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId }), publicKeys, userKeyPair.privateKey);
-//       updateDict(encryptedDict, encryptedDataA.encryptedMap);
+      let encryptedDataA: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId }), publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataA.encryptedMap);
   
-//       let encryptedDataB: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId: userId+userId }), publicKeys, userKeyPair.privateKey);
-//       updateDict(encryptedDict, encryptedDataB.encryptedMap);
+      let encryptedDataB: IEncrypted = _umbral.encryptData([randId], userId+userId, JSON.stringify({ perpId, userId: userId+userId }), publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataB.encryptedMap);
   
-//       let encryptedDataC: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({ perpId, userId: userId+userId+userId }), publicKeys, userKeyPair.privateKey);
-//       updateDict(encryptedDict, encryptedDataC.encryptedMap);  
+      let encryptedDataC: IEncrypted = _umbral.encryptData([randId], userId+userId+userId, JSON.stringify({ perpId, userId: userId+userId+userId }), publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataC.encryptedMap);  
    
-//       decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
-//     }
-//   });
+      decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
+    }
+  });
 
-//   it('Stress test with rand multiple perp ids (max 3), rand number of OCs (max 3)', async function() {
+  it('Stress test with rand multiple perp ids (max 3), rand number of OCs (max 3)', async function() {
 
-//     await _sodium.ready;
-//     const _umbral = new Umbral(_sodium);
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
 
-//     const userKeyPair = _sodium.crypto_box_keypair();
-//     const testNum = 1;
+    const userKeyPair = _sodium.crypto_box_keypair();
+    const testNum = 1;
 
-//     for (let i: number = 0; i < testNum; i++){
-//       let encryptedDict: IEncryptedMap = {};
-//       let [publicKeys, privateKeys] = generateKeys(getRandom(10));
+    for (let i: number = 0; i < testNum; i++){
+      let encryptedDict: IEncryptedMap = {};
+      let [publicKeys, privateKeys] = generateKeys(getRandom(10));
 
-//       let perpId = createRandString();
-//       let userId = createRandString();
+      let perpId = createRandString();
+      let userId = createRandString();
 
-//       // perp ids
-//       let randIds = getRandIds(4);
+      // perp ids
+      let randIds = getRandIds(4);
 
-//       let encryptedDataA: IEncrypted = _umbral.encryptData(randIds, userId, JSON.stringify({ perpId, userId }), publicKeys, userKeyPair.privateKey);
-//       updateDict(encryptedDict, encryptedDataA.encryptedMap);
+      let encryptedDataA: IEncrypted = _umbral.encryptData(randIds, userId, JSON.stringify({ perpId, userId }), publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataA.encryptedMap);
   
-//       let encryptedDataB: IEncrypted = _umbral.encryptData(randIds, userId, JSON.stringify({ perpId, userId: userId+userId }), publicKeys, userKeyPair.privateKey);
-//       updateDict(encryptedDict, encryptedDataB.encryptedMap);
+      let encryptedDataB: IEncrypted = _umbral.encryptData(randIds, userId+userId, JSON.stringify({ perpId, userId: userId+userId }), publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataB.encryptedMap);
   
-//       let encryptedDataC: IEncrypted = _umbral.encryptData(randIds, userId, JSON.stringify({ perpId, userId: userId+userId+userId }), publicKeys, userKeyPair.privateKey);
-//       updateDict(encryptedDict, encryptedDataC.encryptedMap);  
+      let encryptedDataC: IEncrypted = _umbral.encryptData(randIds, userId+userId+userId, JSON.stringify({ perpId, userId: userId+userId+userId }), publicKeys, userKeyPair.privateKey);
+      updateDict(encryptedDict, encryptedDataC.encryptedMap);  
    
-//       decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
-//     }
-//   });
-// });
+      decryptSuccess(encryptedDict, publicKeys, privateKeys, perpId, userId, _umbral);
+    }
+  });
+});
 
 
 
-// describe('Error cases', () => {
+describe('Error cases', () => {
 
-//   it('No public keys provided', async function() {
-//     await _sodium.ready;
-//     const _umbral = new Umbral(_sodium);
+  it('No public keys provided', async function() {
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
 
-//     const userKeyPair = _sodium.crypto_box_keypair();
+    const userKeyPair = _sodium.crypto_box_keypair();
 
-//     const perpId = createRandString();
-//     let userId = createRandString();
-//     const randId: Uint8Array = performOPRF(perpId);
-//     const encrypted: IEncrypted = _umbral.encryptData([randId], {perpId, userId}, {}, userKeyPair.privateKey);
+    const perpId = createRandString();
+    let userId = createRandString();
+    const randId: Uint8Array = performOPRF(perpId);
+    const encrypted: IEncrypted = _umbral.encryptData([randId], userId, JSON.stringify({perpId, userId}), {}, userKeyPair.privateKey);
 
-//     expect(encrypted.malformed.length).to.equal(1);
-//     expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
-//   });
+    expect(encrypted.malformed.length).to.equal(1);
+    expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
+  });
 
 
-//   it('Record missing information', async function() {
-//     await _sodium.ready;
-//     const _umbral = new Umbral(_sodium);
+  // it('Record missing information', async function() {
+  //   await _sodium.ready;
+  //   const _umbral = new Umbral(_sodium);
 
-//     let [publicKeys, privateKeys] = generateKeys(1);
-//     const userKeyPair = _sodium.crypto_box_keypair();
+  //   let [publicKeys, privateKeys] = generateKeys(1);
+  //   const userKeyPair = _sodium.crypto_box_keypair();
 
-//     const perpId = createRandString();
-//     let userId = createRandString();
-//     const randId: Uint8Array = performOPRF(perpId);
-//     let encrypted: IEncrypted = _umbral.encryptData([randId], {perpId: null, userId}, publicKeys, userKeyPair.privateKey);
-//     expect(encrypted.malformed.length).to.equal(1);
-//     expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
-//     expect(encrypted.malformed[0].error).to.equal('Record is missing information');
+  //   const perpId = createRandString();
+  //   let userId = createRandString();
+  //   const randId: Uint8Array = performOPRF(perpId);
+  //   let encrypted: IEncrypted = _umbral.encryptData([randId], {perpId: null, userId}, publicKeys, userKeyPair.privateKey);
+  //   expect(encrypted.malformed.length).to.equal(1);
+  //   expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
+  //   expect(encrypted.malformed[0].error).to.equal('Record is missing information');
 
-//     encrypted = _umbral.encryptData([randId], {perpId: '', userId}, publicKeys, userKeyPair.privateKey);
-//     expect(encrypted.malformed.length).to.equal(1);
-//     expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
-//     expect(encrypted.malformed[0].error).to.equal('Record is missing information');
+  //   encrypted = _umbral.encryptData([randId], {perpId: '', userId}, publicKeys, userKeyPair.privateKey);
+  //   expect(encrypted.malformed.length).to.equal(1);
+  //   expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
+  //   expect(encrypted.malformed[0].error).to.equal('Record is missing information');
 
-//     encrypted = _umbral.encryptData([randId], {perpId, userId: null}, publicKeys, userKeyPair.privateKey);
-//     expect(encrypted.malformed.length).to.equal(1);
-//     expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
-//     expect(encrypted.malformed[0].error).to.equal('Record is missing information');
+  //   encrypted = _umbral.encryptData([randId], {perpId, userId: null}, publicKeys, userKeyPair.privateKey);
+  //   expect(encrypted.malformed.length).to.equal(1);
+  //   expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
+  //   expect(encrypted.malformed[0].error).to.equal('Record is missing information');
 
-//     encrypted = _umbral.encryptData([randId], {perpId, userId: ''}, publicKeys, userKeyPair.privateKey);
-//     expect(encrypted.malformed.length).to.equal(1);
-//     expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
-//     expect(encrypted.malformed[0].error).to.equal('Record is missing information');
+  //   encrypted = _umbral.encryptData([randId], {perpId, userId: ''}, publicKeys, userKeyPair.privateKey);
+  //   expect(encrypted.malformed.length).to.equal(1);
+  //   expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
+  //   expect(encrypted.malformed[0].error).to.equal('Record is missing information');
 
-//   });
-//   it('Asymmetric encryption failure', async function() {
-//     await _sodium.ready;
-//     const _umbral = new Umbral(_sodium);
+  // });
+  // it('Asymmetric encryption failure', async function() {
+  //   await _sodium.ready;
+  //   const _umbral = new Umbral(_sodium);
 
-//     const userKeyPair = _sodium.crypto_box_keypair();
+  //   const userKeyPair = _sodium.crypto_box_keypair();
 
-//     const publicKey = new Uint8Array([10,10,10,10]);
+  //   const publicKey = new Uint8Array([10,10,10,10]);
     
-//     const perpId = createRandString();
-//     let userId = createRandString();
-//     const randId: Uint8Array = performOPRF(perpId);
-//     const encrypted = _umbral.encryptData([randId], {perpId, userId}, {"oc": publicKey} , userKeyPair.privateKey);
+  //   const perpId = createRandString();
+  //   let userId = createRandString();
+  //   const randId: Uint8Array = performOPRF(perpId);
+  //   const encrypted = _umbral.encryptData([randId], {perpId, userId}, {"oc": publicKey} , userKeyPair.privateKey);
 
-//     expect(encrypted.malformed.length).to.equal(1);
-//     expect(encrypted.malformed[0].error.toString()).to.contain('invalid publicKey length');
-//     expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
-//   });
+  //   expect(encrypted.malformed.length).to.equal(1);
+  //   expect(encrypted.malformed[0].error.toString()).to.contain('invalid publicKey length');
+  //   expect(Object.keys(encrypted.encryptedMap).length).to.equal(0);
+  // });
 
-//   it('Asymmetric decryption failure', async function() {
-//     await _sodium.ready;
-//     const _umbral = new Umbral(_sodium);
+  // it('Asymmetric decryption failure', async function() {
+  //   await _sodium.ready;
+  //   const _umbral = new Umbral(_sodium);
 
-//     let encryptedDict: IEncryptedMap = {};
+  //   let encryptedDict: IEncryptedMap = {};
 
-//     const [publicKeys, privateKeys] = generateKeys(1);
+  //   const [publicKeys, privateKeys] = generateKeys(1);
 
-//     const userKeyPair = _sodium.crypto_box_keypair();
+  //   const userKeyPair = _sodium.crypto_box_keypair();
 
-//     const perpId = createRandString();
-//     let userId = createRandString();
-//     const randId: Uint8Array = performOPRF(perpId);
+  //   const perpId = createRandString();
+  //   let userId = createRandString();
+  //   const randId: Uint8Array = performOPRF(perpId);
 
-//     const ocId = Object.keys(publicKeys)[0];
+  //   const ocId = Object.keys(publicKeys)[0];
 
-//     updateDict(encryptedDict, _umbral.encryptData([randId], { perpId, userId }, publicKeys, userKeyPair.privateKey).encryptedMap);
-//     updateDict(encryptedDict, _umbral.encryptData([randId], { perpId, userId: userId+userId }, publicKeys, userKeyPair.privateKey).encryptedMap);
+  //   updateDict(encryptedDict, _umbral.encryptData([randId], { perpId, userId }, publicKeys, userKeyPair.privateKey).encryptedMap);
+  //   updateDict(encryptedDict, _umbral.encryptData([randId], { perpId, userId: userId+userId }, publicKeys, userKeyPair.privateKey).encryptedMap);
 
-//     for (let index in encryptedDict) {
-//       for (let oc in encryptedDict[index]) {
-//         const decrypted = _umbral.decryptData(encryptedDict[index][oc], userKeyPair.publicKey, userKeyPair.privateKey);
-//         expect(decrypted.records.length).to.equal(0);
-//         expect(decrypted.malformed.length).to.equal(2);
-//         expect(decrypted.malformed[0].error.toString()).to.contain('Asymmetric decryption failure');
-//         expect(decrypted.malformed[1].error.toString()).to.contain('Asymmetric decryption failure');
-//       }
-//     }
-//   });
+  //   for (let index in encryptedDict) {
+  //     for (let oc in encryptedDict[index]) {
+  //       const decrypted = _umbral.decryptData(encryptedDict[index][oc], userKeyPair.publicKey, userKeyPair.privateKey);
+  //       expect(decrypted.records.length).to.equal(0);
+  //       expect(decrypted.malformed.length).to.equal(2);
+  //       expect(decrypted.malformed[0].error.toString()).to.contain('Asymmetric decryption failure');
+  //       expect(decrypted.malformed[1].error.toString()).to.contain('Asymmetric decryption failure');
+  //     }
+  //   }
+  });
 
 
 //   it('Key derivation failure', async function() {
