@@ -2,10 +2,10 @@ import bigInt = require('big-integer');
 import * as encoding from 'text-encoding';
 import uuidv4 = require('uuid/v4');
 
-export interface IRecord {
-  readonly perpId: string;
-  readonly userId: string;
-}
+// export interface IRecord {
+//   readonly perpId: string;
+//   readonly userId: string;
+// }
 
 /**
  * Encrypted data object
@@ -52,7 +52,7 @@ export interface IMalformed {
  * Data returned from decryption workflow
  */
 export interface IDecrypted {
-  readonly records: IRecord[];
+  readonly data: string[];
   readonly malformed: IMalformed[]; // ids
 }
 
@@ -110,7 +110,7 @@ export class Umbral {
    * @param userPassPhrase - user's passphrase for use in encrypting for editing
    * @returns {IEncrypted} object containing encrypted data and errors
    */
-  public encryptData(randIds: Uint8Array[], record: IRecord, pkOCs: IKey,
+  public encryptData(randIds: Uint8Array[], userId: string, data: string, pkOCs: IKey,
                      userPassPhrase: Uint8Array): IEncrypted {
 
     const encrypted: IEncrypted = { encryptedMap: {}, malformed: [] };
@@ -122,7 +122,7 @@ export class Umbral {
       return encrypted;
     }
 
-    if (record.perpId === null || record.perpId === '' || record.userId === null || record.userId === '') {
+    if (data === '' || data === null) {
       encrypted.malformed.push({
         error: 'Record is missing information',
         id: 'All'
@@ -131,7 +131,7 @@ export class Umbral {
     }
 
     for (const randId of randIds) {
-      this.createEncryptedObject(encrypted, randId, record, pkOCs, userPassPhrase);
+      this.createEncryptedObject(encrypted, randId, userId, data, pkOCs, userPassPhrase);
     }
     return encrypted;
   }
@@ -145,7 +145,7 @@ export class Umbral {
   public decryptUserRecord(userPassPhrase: Uint8Array, userEncryptedData: IEncryptedData[]): IDecrypted {
 
     // NOTE: is it necessary to do this for ALL oc keys?
-    const records: IRecord[] = [];
+    const data: string[] = [];
     const malformed: IMalformed[] = [];
 
     for (const eUserData of userEncryptedData) {
@@ -154,7 +154,7 @@ export class Umbral {
       try {
         const recordKey: Uint8Array = this.symmetricDecrypt(userPassPhrase, eUser,
             this.USER_EDIT_STRING + eUserData.matchingIndex);
-        records.push(this.decryptRecord(this.sodium.from_base64(recordKey), eUserData.eRecord,
+        data.push(this.decryptRecord(this.sodium.from_base64(recordKey), eUserData.eRecord,
             this.RECORD_STRING + eUserData.matchingIndex));
       } catch (e) {
         malformed.push({
@@ -163,7 +163,7 @@ export class Umbral {
         });
       }
     }
-    return {records, malformed};
+    return {data, malformed};
   }
 
   /**
@@ -175,7 +175,7 @@ export class Umbral {
    */
   public updateUserRecord(userPassPhrase: Uint8Array,
                           userEncryptedData: IEncryptedData[],
-                          updatedRecord: IRecord): IMalformed[] {
+                          updatedRecord: string): IMalformed[] {
     const malformed: IMalformed[] = [];
 
     for (const eUserData of userEncryptedData) {
@@ -189,7 +189,7 @@ export class Umbral {
 
         eUserData.eRecord = this.symmetricEncrypt(
           this.sodium.from_base64(recordKey),
-          JSON.stringify(updatedRecord),
+          updatedRecord,
           this.RECORD_STRING + eUserData.matchingIndex
         );
       } catch (e) {
@@ -212,16 +212,12 @@ export class Umbral {
   public decryptData(encryptedData: IEncryptedData[], pkOC: Uint8Array, skOC: Uint8Array): IDecrypted {
 
     const malformed: IMalformed[] = this.checkMatches(encryptedData);
-
-    if (malformed.length === encryptedData.length) {
-      return {
-        malformed,
-        records: [],
-      };
-    }
-
     const shares: object = {};
-    const records: IRecord[] = [];
+    const data: string[] = [];
+
+    if (malformed.length === encryptedData.length || encryptedData.length < 2) {
+      return { data, malformed };
+    }
 
     for (const eData of encryptedData) {
       try {
@@ -233,10 +229,6 @@ export class Umbral {
           id: eData.id,
         });
       }
-    }
-
-    if (encryptedData.length < 2) {
-      return {records, malformed};
     }
 
     const encryptedDict: object = {};
@@ -255,15 +247,15 @@ export class Umbral {
       for (const [key, s2] of decryptedMap) {
         try {
           const k: Uint8Array = this.interpolateShares(share, s2);
-          const recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey,
-              this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
-          records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord,
-              this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
+        //   const recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey,
+        //       this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
+        //   data.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord,
+        //       this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
 
-          decryptedMap.set(shareId, share);
-          break;
+        //   decryptedMap.set(shareId, share);
+        //   break;
         } catch (e) {
-          // TODO Handle error
+        //   // TODO Handle error
         }
       }
 
@@ -277,7 +269,7 @@ export class Umbral {
           let recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey,
             this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
 
-          records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord,
+          data.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord,
             this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
 
           decryptedMap.set(shareId, share);
@@ -285,7 +277,7 @@ export class Umbral {
           // decrypt share 2
           recordKey = this.symmetricDecrypt(k, s2.eRecordKey,
             this.RECORD_KEY_STRING + encryptedDict[s2Id].matchingIndex);
-          records.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[s2Id].eRecord,
+          data.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[s2Id].eRecord,
             this.RECORD_STRING + encryptedDict[s2Id].matchingIndex));
           decryptedMap.set(ids[i], s2);
 
@@ -302,10 +294,7 @@ export class Umbral {
       delete shares[ids[0]];
     }
 
-    return {
-      malformed,
-      records,
-    };
+    return { data, malformed };
   }
 
   /**
@@ -346,13 +335,13 @@ export class Umbral {
    * @param userPassPhrase - user passphrase
    */
   private createEncryptedObject(encrypted: IEncrypted,
-                                randId: Uint8Array,
-                                record: IRecord, pkOCs: IKey,
+                                randId: Uint8Array, userId: string,
+                                data: string, pkOCs: IKey,
                                 userPassPhrase: Uint8Array): void {
     try {
       const derived: IDerivedValues = this.deriveValues(randId);
       const U: bigInt.BigInteger = bigInt(this.sodium.to_hex(
-        this.sodium.crypto_generichash(this.KEY_BYTES, record.userId)), this.HEX);
+        this.sodium.crypto_generichash(this.KEY_BYTES, userId)), this.HEX);
 
       const kStr: string = this.bytesToString(derived.k);
       const s: bigInt.BigInteger = (derived.slope.times(U).plus(bigInt(kStr))).mod(this.PRIME);
@@ -374,10 +363,9 @@ export class Umbral {
         x: U,
         y: s,
       };
-
       const eRecord: string = this.symmetricEncrypt(
         recordKey,
-        JSON.stringify(record),
+        data,
         this.RECORD_STRING + derived.matchingIndex
       );
 
@@ -500,11 +488,12 @@ export class Umbral {
    * @param {string} ad - additional data associated with ciphertext
    * @returns decrypted record
    */
-  private decryptRecord(recordKey: Uint8Array, eRecord, ad: string): IRecord {
+  private decryptRecord(recordKey: Uint8Array, eRecord, ad: string): string {
     const decryptedRecord: Uint8Array = this.symmetricDecrypt(recordKey, eRecord, ad);
     const dStr: string = new encoding.TextDecoder('utf-8').decode(decryptedRecord);
 
-    return JSON.parse(dStr);
+    return dStr;
+    // return JSON.parse(dStr);
   }
 
   /**
