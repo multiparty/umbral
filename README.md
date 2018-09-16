@@ -15,14 +15,6 @@ The module must be initialized with a sodium instance.
 
 
 ### Public Interfaces
-##### ```IRecord``` #####
-Object for a user-submitted record. It currently contains only a perpetrator ID and a user ID. This can be amended to include additional information.
-```typescript
-export interface IRecord {
-  readonly perpId: string;
-  readonly userId: string;
-}
-```
 ##### ```IKey``` #####
 Dictionary of {id: key} key-value pairs, where the ```id``` identifies the options counselor the key belongs to. This assumes that each options counselor can be identified by an uuid.
 ```typescript
@@ -99,7 +91,7 @@ Decryption returns the following object containing an array of user records and 
  * Data returned from decryption workflow
  */
 export interface IDecrypted {
-  readonly records: IRecord[];
+  readonly data: string[];
   readonly malformed: IMalformed[]; // ids
 }
 ```
@@ -111,12 +103,13 @@ This function must be provided with a dictionary of public keys in the form of `
   /**
    * Encryption workflow
    * @param randIds - array of all randIds corresponding to each perpId submitted
-   * @param record - user's record
+   * @param userId - user's uuid
+   * @param data - record information
    * @param pkOCs - dictionary of all OC public keys
    * @param userPassPhrase - user's passphrase for use in encrypting for editing
    * @returns {IEncrypted} object containing encrypted data and errors
    */
-  public encryptData(randIds: Uint8Array[], record: IRecord, pkOCs: IKey,
+  public encryptData(randIds: Uint8Array[], userId: string, data: string, pkOCs: IKey,
                      userPassPhrase: Uint8Array): IEncrypted 
 ```
 
