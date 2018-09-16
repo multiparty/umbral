@@ -1,38 +1,42 @@
 # Umbral
-[![npm version](https://badge.fury.io/js/umbral.svg)](https://badge.fury.io/js/umbral)[![Build Status](https://travis-ci.org/multiparty/umbral.svg?branch=master)](https://travis-ci.org/multiparty/umbral)
+[![npm version](https://badge.fury.io/js/umbral.svg)](https://badge.fury.io/js/umbral)
+[![Build Status](https://travis-ci.org/multiparty/umbral.svg?branch=master)](https://travis-ci.org/multiparty/umbral)
+[![Coverage Status](https://coveralls.io/repos/github/multiparty/umbral/badge.svg?branch=master)](https://coveralls.io/github/multiparty/umbral?branch=master)
 
 ### Installation
 ```npm install umbral```
 
 ### Initialization
 The module must be initialized with a sodium instance.
-```javascript
+```typescript
     await _sodium.ready;
     const _umbral = new Umbral(_sodium);
 ```
 
 
 ### Public Interfaces
-A user record is represented as the following. It currently contains only a perpetrator ID and a user ID. This can be amended to include additional information.
+##### ```IRecord``` #####
+Object for a user-submitted record. It currently contains only a perpetrator ID and a user ID. This can be amended to include additional information.
 ```typescript
 export interface IRecord {
   readonly perpId: string;
   readonly userId: string;
 }
 ```
-
-```IKey``` is a dictionary of {id: key} key-value pairs, where the id identifies the options counselor the key belongs to.
+##### ```IKey``` #####
+Dictionary of {id: key} key-value pairs, where the ```id``` identifies the options counselor the key belongs to. This assumes that each options counselor can be identified by an uuid.
 ```typescript
 /**
- * Dictionary of {id, key}
+ * Dictionary of {id: key}
  */
 export interface IKey {
   [id: string]: Uint8Array;
 }
 ```
 
-The ```IMalformed``` object stores the id of a ```IEncryptedData``` object (described below) and an error string to identify errors in either the encryption or decryption workflow.
-```
+##### ```IMalformed``` #####
+Object for storing errors in either the encryption or decryption workflow. Within encryption, the ```id``` serves to notify the input that an error occurred on. For decryption, the ```id``` corresponds to a particular ```IEncryptedData```, described below. For both workflows the error field contains exact errors produced.
+```typescript
 /**
  * Object for storing errors
  */
@@ -42,7 +46,8 @@ export interface IMalformed {
 }
 ```
 
-Each encrypted data object contains the ciphertext resulting from encryption using a single perpId and a single OC's public key. 
+##### ```IEncryptedData``` #####
+Object containing the ciphertext resulting from encryption using a *single perpId* and a *single OC's public key*. The number of ```IEncryptedData``` objects at the end of the encryption worfklow should equal the number of perpetrator IDs submitted multiplied by the number of OCs.
 ```typescript
 /**
  * Encrypted data object
@@ -56,7 +61,8 @@ export interface IEncryptedData {
 }
 ```
 
-```IOCDataMap``` maps each options counselor, identified through an id, to an array of encrypted data objects that have all been encrypted under the OC's public key.
+##### ```IOCDataMap``` #####
+A dictionary mapping each options counselor, identified through an id, to an array of encrypted data objects that have all been encrypted under the OC's public key.
 ```typescript
 /**
  * Mapping of OC id to matching records
@@ -65,8 +71,8 @@ export interface IOCDataMap {
   [OCid: string]: IEncryptedData[];
 }
 ```
-
-```IEncryptedMap``` represents the mapping of a matching index to all the records that have the same matching index encrypted under each options counselor's public key. 
+##### ```IEncryptedMap``` #####
+Dictionary represents the mapping of a matching index to all the records that have the same matching index encrypted under each options counselor's public key. 
 ```typescript
 /**
  * Mapping of matching index to all matching records under a specific OC
@@ -75,7 +81,7 @@ export interface IEncryptedMap {
   [matchingIndex: string]: IOCDataMap;
 }
 ```
-
+##### ```IEncrypted``` #####
 At the end of the encryption workflow, a single object will be returned in the following form. The encryptedMap should contain as many matching indices as submitted perpIds. Corresponding to each matching index is the ```IOCDataMap``` for each options counselor, containing their corresponding ciphertexts. 
 ```typescript
 /**
@@ -86,7 +92,7 @@ export interface IEncrypted {
   readonly malformed: IMalformed[];
 }
 ```
-
+##### ```IDecrypted``` #####
 Decryption returns the following object containing an array of user records and an array of malformed objects where decryption did not properly occur.
 ```typescript
 /**
@@ -99,9 +105,7 @@ export interface IDecrypted {
 ```
 
 ### Encryption
-This function must be provided with a dictionary of public keys in the form of a dictionary of ```IKey``` key-value pairs (pkOCs).
-It will return all of the encrypted data in ```IEncrypted``` form. 
-
+This function must be provided with a dictionary of public keys in the form of ```IKey``` key-value pairs (pkOCs). It will return all of the encrypted data in ```IEncrypted``` form. 
 ```typescript
 
   /**
@@ -159,8 +163,6 @@ The following example involves two users and two options counselors.
         const decrypted = _umbral.decryptData(encrypted, publicKeys[oc], privateKeys[oc]);
       }
     }
-
-
 ```
 
 Additional examples can be found under ```test/tests.ts```

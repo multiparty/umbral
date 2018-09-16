@@ -5,3 +5,5 @@ typings/
 logs
 dist/
 .nyc_output/
+.idea/
+*.iml
