@@ -2,11 +2,6 @@ import bigInt = require('big-integer');
 import * as encoding from 'text-encoding';
 import uuidv4 = require('uuid/v4');
 
-// export interface IRecord {
-//   readonly perpId: string;
-//   readonly userId: string;
-// }
-
 /**
  * Encrypted data object
  */
@@ -105,13 +100,13 @@ export class Umbral {
   /**
    * Encryption workflow
    * @param randIds - array of all randIds corresponding to each perpId submitted
-   * @param record - user's record
+   * @param data - record information
    * @param pkOCs - dictionary of all OC public keys
    * @param userPassPhrase - user's passphrase for use in encrypting for editing
    * @returns {IEncrypted} object containing encrypted data and errors
    */
   public encryptData(randIds: Uint8Array[], userId: string, data: string, pkOCs: IKey,
-                     userPassPhrase: Uint8Array): IEncrypted {
+                     userPassPhrase?: Uint8Array): IEncrypted {
 
     const encrypted: IEncrypted = { encryptedMap: {}, malformed: [] };
     if (Object.keys(pkOCs).length < 1) {
@@ -352,11 +347,15 @@ export class Umbral {
         this.sodium.to_base64(recordKey),
         this.RECORD_KEY_STRING + derived.matchingIndex
       );
-      const eUser: string = this.symmetricEncrypt(
-        userPassPhrase,
-        this.sodium.to_base64(recordKey),
-        this.USER_EDIT_STRING + derived.matchingIndex
-      );
+
+      let eUser: string = null;
+      if (userPassPhrase) {
+        eUser = this.symmetricEncrypt(
+          userPassPhrase,
+          this.sodium.to_base64(recordKey),
+          this.USER_EDIT_STRING + derived.matchingIndex
+        );
+      }
 
       const msg: IShare = {
         eRecordKey,
