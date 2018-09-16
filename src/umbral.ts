@@ -124,8 +124,8 @@ export class Umbral {
 
     if (data === '' || data === null) {
       encrypted.malformed.push({
-        error: 'Record is missing information',
-        id: 'All'
+        error: 'No data provided',
+        id: 'encryptData'
       });
       return encrypted;
     }
