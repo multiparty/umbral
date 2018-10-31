@@ -8,7 +8,8 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "tslint -c tslint.json --project tsconfig.json && nyc mocha --timeout 200000 -r ts-node/register -r source-map-support/register test/umbral.spec.ts",
+    "test": "tslint -c tslint.json --project tsconfig.json && nyc mocha --timeout 200000 -r ts-node/register -r source-map-support/register test/*",
+    "test-build": "nyc mocha --timeout 200000 -r ts-node/register -r source-map-support/register test/*",
     "coveralls": "npm test && nyc report --reporter=text-lcov | ./node_modules/coveralls/bin/coveralls.js"
   },
   "nyc": {

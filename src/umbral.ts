@@ -197,6 +197,38 @@ export class Umbral {
     return malformed;
   }
 
+  private decryptShare(k, s, encrypted, decryptedData) {
+    try {
+      const recordKey: Uint8Array = this.symmetricDecrypt(k, s.eRecordKey,
+        this.RECORD_KEY_STRING + encrypted.matchingIndex);
+  
+      const decrypted = this.decryptRecord(this.sodium.from_base64(recordKey), encrypted.eRecord,
+              this.RECORD_STRING + encrypted.matchingIndex);
+      
+      decryptedData.data.push(decrypted);       
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  private OCDecrypt(skOC, pkOC, encryptedData, decryptedData) {
+    const shares: object = {};
+    // decrypt all pieces of data using OC's private key
+    for (const eData of encryptedData) {
+      try {
+        const id = eData.id;
+        shares[id] = this.asymmetricDecrypt(eData, skOC, pkOC);
+      } catch (e) {
+        decryptedData.malformed.push({
+          error: e,
+          id: eData.id,
+        });
+      }
+    }
+    return shares;
+  }
+
   /**
    * Decrypts an array of encrypted data
    * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
@@ -206,90 +238,63 @@ export class Umbral {
    */
   public decryptData(encryptedData: IEncryptedData[], pkOC: Uint8Array, skOC: Uint8Array): IDecrypted {
 
-    const malformed: IMalformed[] = this.checkMatches(encryptedData);
-    const shares: object = {};
-    const data: string[] = [];
+    const decryptedData: IDecrypted = {
+      data: [],
+      malformed: this.checkMatches(encryptedData),
+    };
 
-    if (malformed.length === encryptedData.length || encryptedData.length < 2) {
-      return { data, malformed };
+    const keys = [];
+
+    if (decryptedData.malformed.length === encryptedData.length || encryptedData.length < 2) {
+      return decryptedData;
     }
 
-    for (const eData of encryptedData) {
-      try {
-        const id = eData.id;
-        shares[id] = this.asymmetricDecrypt(eData, skOC, pkOC);
-      } catch (e) {
-        malformed.push({
-          error: e,
-          id: eData.id,
-        });
-      }
-    }
+    let shares = this.OCDecrypt(skOC, pkOC, encryptedData, decryptedData);
 
-    const encryptedDict: object = {};
-    for (const eData of encryptedData) {
-      const id = eData.id;
-      encryptedDict[id] = eData;
-    }
+    while (encryptedData.length > 0) {
+      const encrypted = encryptedData.pop();
+      const sId = encrypted.id;
+      const s = shares[sId]; 
+      delete shares[sId];
+      let decryptedFlag = false;
 
-    const decryptedMap = new Map();
-    while (Object.keys(shares).length > 0) {
-
-      const ids = Object.keys(shares);
-      const shareId = ids[0];
-      const share = shares[ids[0]];
-
-      for (const [key, s2] of decryptedMap) {
-        try {
-          const k: Uint8Array = this.interpolateShares(share, s2);
-        //   const recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey,
-        //       this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
-        //   data.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord,
-        //       this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
-
-        //   decryptedMap.set(shareId, share);
-        //   break;
-        } catch (e) {
-        //   // TODO Handle error
+      if (keys.length > 0) {
+        for (let k of keys) {
+          if (this.decryptShare(k, s, encrypted, decryptedData)) {
+            decryptedFlag = true;
+            break;
+          }
         }
       }
 
-      for (let i = 1; i < ids.length; i++) {
+      if (decryptedFlag) { continue; }
+
+      const len = encryptedData.length; 
+      for (let i = len - 1; i >= 0; i--) {
+        const e = encryptedData[i];
+        const s2 = shares[e.id];
         try {
-          const s2: IShare = shares[ids[i]];
-          const s2Id: string = ids[i];
-          const k: Uint8Array = this.interpolateShares(share, s2);
-
-          // decrypt share 1
-          let recordKey: Uint8Array = this.symmetricDecrypt(k, share.eRecordKey,
-            this.RECORD_KEY_STRING + encryptedDict[shareId].matchingIndex);
-
-          data.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[shareId].eRecord,
-            this.RECORD_STRING + encryptedDict[shareId].matchingIndex));
-
-          decryptedMap.set(shareId, share);
-
-          // decrypt share 2
-          recordKey = this.symmetricDecrypt(k, s2.eRecordKey,
-            this.RECORD_KEY_STRING + encryptedDict[s2Id].matchingIndex);
-          data.push(this.decryptRecord(this.sodium.from_base64(recordKey), encryptedDict[s2Id].eRecord,
-            this.RECORD_STRING + encryptedDict[s2Id].matchingIndex));
-          decryptedMap.set(ids[i], s2);
-
-          delete shares[s2Id];
-          break;
-
-        } catch (e) {
-          malformed.push({
-            error: e,
-            id: shareId,
-          });
+          const k: Uint8Array = this.interpolateShares(s, s2);
+          if (this.decryptShare(k, s, encrypted, decryptedData)) {
+            keys.push(k);
+            decryptedFlag = true;
+            if (this.decryptShare(k, s2, e, decryptedData)) {
+              let index = encryptedData.indexOf(e);
+              encryptedData.splice(index, 1);
+              delete shares[e.id];  
+            }
+            break; // successfully decrypted. do not need to continue checking
+          }  
         }
+        catch(e) {}
       }
-      delete shares[ids[0]];
+      if (decryptedFlag) {continue;}
+      decryptedData.malformed.push({
+        error: 'Share could not be decrypted',
+        id: encrypted.id
+      });
     }
-
-    return { data, malformed };
+    return decryptedData;
   }
 
   /**
