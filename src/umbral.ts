@@ -251,7 +251,7 @@ export class Umbral {
 
     let shares = this.OCDecrypt(skOC, pkOC, encryptedData, decryptedData);
 
-    while (encryptedData.length > 0) {
+    while (Object.keys(shares).length > 0) {
       const encrypted = encryptedData.pop();
       const sId = encrypted.id;
       const s = shares[sId]; 
