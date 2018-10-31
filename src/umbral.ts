@@ -132,6 +132,74 @@ export class Umbral {
   }
 
   /**
+   * Decrypts an array of encrypted data
+   * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
+   * @param pkOC - public key of an options counselor
+   * @param skOC - secret key of an options counselor
+   * @returns {IDecrypted]} object containing decrypted records and errors
+   */
+  public decryptData(encryptedData: IEncryptedData[], pkOC: Uint8Array, skOC: Uint8Array): IDecrypted {
+
+    const decryptedData: IDecrypted = {
+      data: [],
+      malformed: this.checkMatches(encryptedData),
+    };
+
+    if (decryptedData.malformed.length === encryptedData.length || encryptedData.length < 2) {
+      return decryptedData;
+    }
+
+    const keys = [];
+    const shares = this.OCDecrypt(pkOC, skOC, encryptedData, decryptedData);
+
+    while (Object.keys(shares).length > 0) {
+      const encrypted = encryptedData.pop();
+      const sId = encrypted.id;
+      const s = shares[sId];
+      delete shares[sId];
+      let decryptedFlag = false;
+
+      if (keys.length > 0) {
+        for (const k of keys) {
+          if (this.decryptShare(k, s, encrypted, decryptedData)) {
+            decryptedFlag = true;
+            break;
+          }
+        }
+      }
+
+      if (decryptedFlag) { continue; }
+
+      const len = encryptedData.length;
+      for (let i = len - 1; i >= 0; i--) {
+        const e = encryptedData[i];
+        const s2 = shares[e.id];
+        try {
+          const k: Uint8Array = this.interpolateShares(s, s2);
+          if (this.decryptShare(k, s, encrypted, decryptedData)) {
+            keys.push(k);
+            decryptedFlag = true;
+            if (this.decryptShare(k, s2, e, decryptedData)) {
+              encryptedData.splice(encryptedData.indexOf(e), 1);
+              delete shares[e.id];
+            }
+            break; // successfully decrypted. do not need to continue checking
+          }
+        } catch (e) {
+        // ignore and continue trying to decrypt with remaining shares
+        }
+      }
+      if (decryptedFlag) { continue; }
+      // made it to end and did not find a single share to decrypt with
+      decryptedData.malformed.push({
+        error: 'Share could not be decrypted',
+        id: encrypted.id
+      });
+    }
+    return decryptedData;
+  }
+
+  /**
    * Decrypts a user's record for editing purposes
    * @param userPassPhrase - original passphrase used to encrypt the record key
    * @param {IEncryptedData[]} userEncryptedData - a user's record encrypted under each OC public key
@@ -197,22 +265,34 @@ export class Umbral {
     return malformed;
   }
 
+  /**
+   * Decrypts a single share using the derived key, k
+   * @param k - key used to decrypt the record key
+   * @param s - current share
+   * @param encrypted - encrypted data object corresponding to current share
+   * @param decryptedData - object containing decrypted records and errors
+   */
   private decryptShare(k, s, encrypted, decryptedData) {
     try {
       const recordKey: Uint8Array = this.symmetricDecrypt(k, s.eRecordKey,
         this.RECORD_KEY_STRING + encrypted.matchingIndex);
-  
       const decrypted = this.decryptRecord(this.sodium.from_base64(recordKey), encrypted.eRecord,
               this.RECORD_STRING + encrypted.matchingIndex);
-      
-      decryptedData.data.push(decrypted);       
+      decryptedData.data.push(decrypted);
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  private OCDecrypt(skOC, pkOC, encryptedData, decryptedData) {
+  /**
+   * Asymmetrically decrypts all shares using an OC's keys
+   * @param pkOC - public key of an options counselor
+   * @param skOC - secret key of an options counselor
+   * @param encryptedData - an array of encrypted data of matched users
+   * @param decryptedData - object containg decrypted records and errors
+   */
+  private OCDecrypt(pkOC, skOC, encryptedData, decryptedData) {
     const shares: object = {};
     // decrypt all pieces of data using OC's private key
     for (const eData of encryptedData) {
@@ -227,74 +307,6 @@ export class Umbral {
       }
     }
     return shares;
-  }
-
-  /**
-   * Decrypts an array of encrypted data
-   * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
-   * @param pkOC - public key of an options counselor
-   * @param skOC - secret key of an options counselor
-   * @returns {IDecrypted]} object containing decrypted records and errors
-   */
-  public decryptData(encryptedData: IEncryptedData[], pkOC: Uint8Array, skOC: Uint8Array): IDecrypted {
-
-    const decryptedData: IDecrypted = {
-      data: [],
-      malformed: this.checkMatches(encryptedData),
-    };
-
-    const keys = [];
-
-    if (decryptedData.malformed.length === encryptedData.length || encryptedData.length < 2) {
-      return decryptedData;
-    }
-
-    let shares = this.OCDecrypt(skOC, pkOC, encryptedData, decryptedData);
-
-    while (Object.keys(shares).length > 0) {
-      const encrypted = encryptedData.pop();
-      const sId = encrypted.id;
-      const s = shares[sId]; 
-      delete shares[sId];
-      let decryptedFlag = false;
-
-      if (keys.length > 0) {
-        for (let k of keys) {
-          if (this.decryptShare(k, s, encrypted, decryptedData)) {
-            decryptedFlag = true;
-            break;
-          }
-        }
-      }
-
-      if (decryptedFlag) { continue; }
-
-      const len = encryptedData.length; 
-      for (let i = len - 1; i >= 0; i--) {
-        const e = encryptedData[i];
-        const s2 = shares[e.id];
-        try {
-          const k: Uint8Array = this.interpolateShares(s, s2);
-          if (this.decryptShare(k, s, encrypted, decryptedData)) {
-            keys.push(k);
-            decryptedFlag = true;
-            if (this.decryptShare(k, s2, e, decryptedData)) {
-              let index = encryptedData.indexOf(e);
-              encryptedData.splice(index, 1);
-              delete shares[e.id];  
-            }
-            break; // successfully decrypted. do not need to continue checking
-          }  
-        }
-        catch(e) {}
-      }
-      if (decryptedFlag) {continue;}
-      decryptedData.malformed.push({
-        error: 'Share could not be decrypted',
-        id: encrypted.id
-      });
-    }
-    return decryptedData;
   }
 
   /**
