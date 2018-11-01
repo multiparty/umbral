@@ -443,13 +443,14 @@ export class Umbral {
       }];
     }
 
+    // sort all shares under matching index
     for (const eData of encryptedData) {
       const index = eData.matchingIndex;
 
       if (index in matchingDict) {
-        matchingDict[index].push(eData.id);
+        matchingDict[index].push(eData);
       } else {
-        matchingDict[index] = [eData.id];
+        matchingDict[index] = [eData];
       }
     }
 
@@ -457,8 +458,9 @@ export class Umbral {
       if (matchingDict[index].length === 1) {
         malformed.push({
           error: 'Matching index does not match with other shares',
-          id: matchingDict[index][0],
+          id: matchingDict[index][0].id,
         });
+        encryptedData.splice(encryptedData.indexOf(matchingDict[index][0]));
       }
     }
     return malformed;
