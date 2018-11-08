@@ -5,6 +5,7 @@ import { OPRF, IMaskedData } from 'oprf';
 var _sodium = require('libsodium-wrappers-sumo');
 
 const SHARE_NO_DECRYPT = 'Share could not be decrypted';
+const ASYMMETRIC_DEC_FAIL = 'Asymmetric decryption failure';
 
 function getRandom(max: number): number {
     return Math.floor(Math.random() * Math.floor(max));
@@ -430,11 +431,12 @@ describe('Error cases', () => {
     for (let index in encryptedDict) {
       for (let oc in encryptedDict[index]) {
         const decrypted = _umbral.decryptData(encryptedDict[index][oc], userKeyPair.publicKey, userKeyPair.privateKey);
-
         expect(decrypted.data.length).to.equal(0);
-        expect(decrypted.malformed.length).to.equal(2);
-        expect(decrypted.malformed[0].error.toString()).to.contain('Asymmetric decryption failure');
-        expect(decrypted.malformed[1].error.toString()).to.contain('Asymmetric decryption failure');
+        expect(decrypted.malformed.length).to.equal(4);
+        expect(decrypted.malformed[0].error.toString()).to.contain(ASYMMETRIC_DEC_FAIL);
+        expect(decrypted.malformed[1].error.toString()).to.contain(ASYMMETRIC_DEC_FAIL);
+        expect(decrypted.malformed[2].error.toString()).to.contain(SHARE_NO_DECRYPT);
+        expect(decrypted.malformed[3].error.toString()).to.contain(SHARE_NO_DECRYPT);
       }
     }
   });
@@ -709,9 +711,8 @@ describe('Interpolation cases', () => {
       expect(m.error).to.equal(SHARE_NO_DECRYPT);
     }
 
-    // expect(decrypted.malformed.length).to.equal(1);
+    expect(decrypted.malformed.length).to.equal(4);
   });
-  
 });
 
 describe('User editing', () => {
