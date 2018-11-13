@@ -1,6 +1,6 @@
 {
   "name": "umbral",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "main": "dist/umbral.js",
   "types": "dist/umbral.d.ts",
   "files": [

@@ -65,63 +65,143 @@
 		<div class="col-8 col-content">
 			<div class="tsd-panel tsd-typography">
 				<h1 id="umbral">Umbral</h1>
-				<p><a href="https://travis-ci.org/multiparty/umbral"><img src="https://travis-ci.org/multiparty/umbral.svg?branch=master" alt="Build Status"></a></p>
+				<p><a href="https://badge.fury.io/js/umbral"><img src="https://badge.fury.io/js/umbral.svg" alt="npm version"></a>
+					<a href="https://travis-ci.org/multiparty/umbral"><img src="https://travis-ci.org/multiparty/umbral.svg?branch=master" alt="Build Status"></a>
+				<a href="https://coveralls.io/github/multiparty/umbral?branch=master"><img src="https://coveralls.io/repos/github/multiparty/umbral/badge.svg?branch=master" alt="Coverage Status"></a></p>
 				<h3 id="installation">Installation</h3>
 				<p><code>npm install umbral</code></p>
 				<h3 id="initialization">Initialization</h3>
 				<p>The module must be initialized with a sodium instance.</p>
-				<pre><code class="lang-javascript"><span class="hljs-keyword">let</span> _sodium = <span class="hljs-literal">null</span>;
-<span class="hljs-keyword">await</span> _sodium.ready;
-umbral.init(_sodium);
+				<pre><code class="lang-typescript">    <span class="hljs-keyword">await</span> _sodium.ready;
+    <span class="hljs-keyword">const</span> _umbral = <span class="hljs-keyword">new</span> Umbral(_sodium);
 </code></pre>
-				<h3 id="encryption">Encryption</h3>
-				<pre><code class="lang-javascript"><span class="hljs-comment">/**
-  * Encrypts a user's record
-  * @param {Uint8Array} randId - random ID
-  * @param {IRecord} record - user record
-  * @param {Uint8Array[]} publicKeys - options counselor public keys
-  * @param {Uint8Array} skUser - user's secret key
-  * @returns {IEncryptedData[]} an array of records encrypted under each public key
-  */</span>
-<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">encryptData</span>(<span class="hljs-params">randId: Uint8Array, record: IRecord, publicKeys: Uint8Array[], skUser: Uint8Array</span>)</span>
-</code></pre>
-				<h3 id="decryption">Decryption</h3>
-				<p>The function should be provided with <strong>matched</strong> encrypted records</p>
-				<pre><code class="lang-javascript"><span class="hljs-comment">/**
- * Decrypts an array of encrypted data
- * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users
- * @param {Uint8Array} skOC - secret key of an options counselor
- * @param pkUser - user's private key
- * @returns {IRecord[]} array of decrypted records from matched users
+				<h3 id="public-interfaces">Public Interfaces</h3>
+				<h5 id="ikey"><code>IKey</code></h5>
+				<p>Dictionary of {id: key} key-value pairs, where the <code>id</code> identifies the options counselor the key belongs to. This assumes that each options counselor can be identified by an uuid.</p>
+				<pre><code class="lang-typescript"><span class="hljs-comment">/**
+ * Dictionary of {id: key}
  */</span>
-<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">decryptData</span>(<span class="hljs-params">encryptedData: IEncryptedData[], skOC: Uint8Array, pkUser: Uint8Array</span>)</span>
-</code></pre>
-				<h3 id="basic-end-to-end-example">Basic End-to-End Example</h3>
-				<pre><code class="lang-javascript">
-<span class="hljs-keyword">await</span> _sodium.ready;
-umbral.init(_sodium);
-
-<span class="hljs-keyword">const</span> ocKeyPair = _sodium.crypto_box_keypair();
-<span class="hljs-keyword">const</span> userKeyPairA = _sodium.crypto_box_keypair();
-<span class="hljs-keyword">const</span> userKeyPairB = _sodium.crypto_box_keypair();
-
-<span class="hljs-keyword">const</span> perpId = <span class="hljs-string">'facebook.com/Mallory'</span>;
-<span class="hljs-keyword">const</span> randId: <span class="hljs-built_in">Uint8Array</span> = hashId(perpId);
-
-<span class="hljs-keyword">const</span> encryptedDataA = umbral.encryptData(randId, { perpId, <span class="hljs-string">'Alice'</span> }, [ocKeyPair.publicKey], userKeyPairA.privateKey);
-<span class="hljs-keyword">const</span> encryptedDataB = umbral.encryptData(randId, { perpId, <span class="hljs-string">'Bob'</span> }, [ocKeyPair.publicKey], userKeyPairB.privateKey);
-<span class="hljs-keyword">const</span> decryptedRecords = umbral.decryptData([encryptedDataA[<span class="hljs-number">0</span>], encryptedDataB[<span class="hljs-number">0</span>]], 
-                                             ocKeyPair.privateKey, 
-                                             [userKeyPairA.publicKey, userKeyPairB.publicKey]);
-</code></pre>
-				<p>Additional examples can be found under <code>test/tests.ts</code></p>
-				<h3 id="relevant-interfaces">Relevant Interfaces</h3>
-				<p>A record is currently only a perpetrator ID and a user ID. This can be amended to include additional information.</p>
-				<pre><code><span class="hljs-builtin-name">export</span><span class="hljs-built_in"> interface </span>IRecord {
-  readonly perpId: string;
-  readonly userId: string;
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IKey {
+  [id: <span class="hljs-built_in">string</span>]: <span class="hljs-built_in">Uint8Array</span>;
 }
 </code></pre>
+				<h5 id="imalformed"><code>IMalformed</code></h5>
+				<p>Object for storing errors in either the encryption or decryption workflow. Within encryption, the <code>id</code> serves to notify the input that an error occurred on. For decryption, the <code>id</code> corresponds to a particular <code>IEncryptedData</code>, described below. For both workflows the error field contains exact errors produced.</p>
+				<pre><code class="lang-typescript"><span class="hljs-comment">/**
+ * Object for storing errors
+ */</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IMalformed {
+  readonly id: <span class="hljs-built_in">string</span>;
+  readonly error: <span class="hljs-built_in">string</span>;
+}
+</code></pre>
+				<h5 id="iencrypteddata"><code>IEncryptedData</code></h5>
+				<p>Object containing the ciphertext resulting from encryption using a <em>single perpId</em> and a <em>single OC&#39;s public key</em>. The number of <code>IEncryptedData</code> objects at the end of the encryption worfklow should equal the number of perpetrator IDs submitted multiplied by the number of OCs.</p>
+				<pre><code class="lang-typescript"><span class="hljs-comment">/**
+ * Encrypted data object
+ */</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IEncryptedData {
+  readonly eOC: <span class="hljs-built_in">string</span>; <span class="hljs-comment">// c</span>
+  eRecord: <span class="hljs-built_in">string</span>;
+  readonly eUser: <span class="hljs-built_in">string</span>; <span class="hljs-comment">// c'user</span>
+  readonly id: <span class="hljs-built_in">string</span>; <span class="hljs-comment">// id</span>
+  readonly matchingIndex: <span class="hljs-built_in">string</span>; <span class="hljs-comment">// pi</span>
+}
+</code></pre>
+				<h5 id="iocdatamap"><code>IOCDataMap</code></h5>
+				<p>A dictionary mapping each options counselor, identified through an id, to an array of encrypted data objects that have all been encrypted under the OC&#39;s public key.</p>
+				<pre><code class="lang-typescript"><span class="hljs-comment">/**
+ * Mapping of OC id to matching records
+ */</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IOCDataMap {
+  [OCid: <span class="hljs-built_in">string</span>]: IEncryptedData[];
+}
+</code></pre>
+				<h5 id="iencryptedmap"><code>IEncryptedMap</code></h5>
+				<p>Dictionary represents the mapping of a matching index to all the records that have the same matching index encrypted under each options counselor&#39;s public key. </p>
+				<pre><code class="lang-typescript"><span class="hljs-comment">/**
+ * Mapping of matching index to all matching records under a specific OC
+ */</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IEncryptedMap {
+  [matchingIndex: <span class="hljs-built_in">string</span>]: IOCDataMap;
+}
+</code></pre>
+				<h5 id="iencrypted"><code>IEncrypted</code></h5>
+				<p>At the end of the encryption workflow, a single object will be returned in the following form. The encryptedMap should contain as many matching indices as submitted perpIds. Corresponding to each matching index is the <code>IOCDataMap</code> for each options counselor, containing their corresponding ciphertexts. </p>
+				<pre><code class="lang-typescript"><span class="hljs-comment">/**
+ * Data object returned from encryption workflow
+ */</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IEncrypted {
+  readonly encryptedMap: IEncryptedMap;
+  readonly malformed: IMalformed[];
+}
+</code></pre>
+				<h5 id="idecrypted"><code>IDecrypted</code></h5>
+				<p>Decryption returns the following object containing an array of user records and an array of malformed objects where decryption did not properly occur.</p>
+				<pre><code class="lang-typescript"><span class="hljs-comment">/**
+ * Data returned from decryption workflow
+ */</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IDecrypted {
+  readonly data: <span class="hljs-built_in">string</span>[];
+  readonly malformed: IMalformed[]; <span class="hljs-comment">// ids</span>
+}
+</code></pre>
+				<h3 id="encryption">Encryption</h3>
+				<p>This function must be provided with a dictionary of public keys in the form of <code>IKey</code> key-value pairs (pkOCs). It will return all of the encrypted data in <code>IEncrypted</code> form. </p>
+				<pre><code class="lang-typescript">
+  <span class="hljs-comment">/**
+   * Encryption workflow
+   * @param randIds - array of all randIds corresponding to each perpId submitted
+   * @param userId - user's uuid
+   * @param data - record information
+   * @param pkOCs - dictionary of all OC public keys
+   * @param userPassPhrase - user's passphrase for use in encrypting for editing
+   * @returns {IEncrypted} object containing encrypted data and errors
+   */</span>
+  <span class="hljs-keyword">public</span> encryptData(randIds: <span class="hljs-built_in">Uint8Array</span>[], userId: <span class="hljs-built_in">string</span>, data: <span class="hljs-built_in">string</span>, pkOCs: IKey,
+                     userPassPhrase: <span class="hljs-built_in">Uint8Array</span>): IEncrypted 
+</code></pre>
+				<h3 id="decryption">Decryption</h3>
+				<p>The function should be provided with <strong>matched</strong> encrypted records encrypted under a specific OC&#39;s public key.</p>
+				<pre><code class="lang-typescript">
+  <span class="hljs-comment">/**
+   * Decryption workflow
+   * @param {IEncryptedData[]} encryptedData - an array of encrypted data of matched users, under a single OC's public key
+   * @param pkOC - public key of an options counselor
+   * @param skOC - secret key of an options counselor
+   * @returns {IDecrypted]} object containing decrypted records and errors
+   */</span>
+  <span class="hljs-keyword">public</span> decryptData(encryptedData: IEncryptedData[], pkOC: <span class="hljs-built_in">Uint8Array</span>, skOC: <span class="hljs-built_in">Uint8Array</span>): IDecrypted 
+
+</code></pre>
+				<h3 id="end-to-end-example">End-to-End Example</h3>
+				<p>The following example involves two users and two options counselors.</p>
+				<pre><code class="lang-typescript">    <span class="hljs-keyword">let</span> encryptedDict: IEncryptedMap = {};
+
+    <span class="hljs-keyword">await</span> _sodium.ready;
+    <span class="hljs-keyword">const</span> _umbral = <span class="hljs-keyword">new</span> Umbral(_sodium);
+
+    <span class="hljs-keyword">const</span> userKeyPair = _sodium.crypto_box_keypair();
+
+    <span class="hljs-keyword">var</span> [publicKeys, privateKeys] = generateKeys(<span class="hljs-number">2</span>);
+
+    <span class="hljs-keyword">const</span> perpId = <span class="hljs-string">'facebook.com/Mallory'</span>;
+    <span class="hljs-keyword">const</span> randId: <span class="hljs-built_in">Uint8Array</span> = performOPRF(perpId);
+
+    <span class="hljs-keyword">const</span> encryptedDataA: IEncrypted = _umbral.encryptData([randId], { perpId, userId: <span class="hljs-string">'Alice'</span> }, publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataA.encryptedMap);
+
+    <span class="hljs-keyword">const</span> encryptedDataB: IEncrypted = _umbral.encryptData([randId], { perpId, userId: <span class="hljs-string">'Bob'</span> }, publicKeys, userKeyPair.privateKey);
+    updateDict(encryptedDict, encryptedDataB.encryptedMap);
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> index <span class="hljs-keyword">in</span> encryptedDict) {
+      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> oc <span class="hljs-keyword">in</span> encryptedDict[index]) {
+        <span class="hljs-keyword">const</span> encrypted = encryptedDict[index][oc];
+        <span class="hljs-keyword">const</span> decrypted = _umbral.decryptData(encrypted, publicKeys[oc], privateKeys[oc]);
+      }
+    }
+</code></pre>
+				<p>Additional examples can be found under <code>test/tests.ts</code></p>
 			</div>
 		</div>
 		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">

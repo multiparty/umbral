@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>IEncryptedData | umbral</title>
+	<title>IEncrypted | umbral</title>
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
@@ -59,10 +59,10 @@
 					<a href="../modules/_umbral_.html">&quot;umbral&quot;</a>
 				</li>
 				<li>
-					<a href="_umbral_.iencrypteddata.html">IEncryptedData</a>
+					<a href="_umbral_.iencrypted.html">IEncrypted</a>
 				</li>
 			</ul>
-			<h1>Interface IEncryptedData</h1>
+			<h1>Interface IEncrypted</h1>
 		</div>
 	</div>
 </header>
@@ -72,7 +72,7 @@
 			<section class="tsd-panel tsd-comment">
 				<div class="tsd-comment tsd-typography">
 					<div class="lead">
-						<p>Encrypted data object</p>
+						<p>Data object returned from encryption workflow</p>
 					</div>
 				</div>
 			</section>
@@ -80,7 +80,7 @@
 				<h3>Hierarchy</h3>
 				<ul class="tsd-hierarchy">
 					<li>
-						<span class="target">IEncryptedData</span>
+						<span class="target">IEncrypted</span>
 					</li>
 				</ul>
 			</section>
@@ -91,11 +91,8 @@
 						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_umbral_.iencrypteddata.html#eoc" class="tsd-kind-icon">eOC</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_umbral_.iencrypteddata.html#erecord" class="tsd-kind-icon">e<wbr>Record</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_umbral_.iencrypteddata.html#euser" class="tsd-kind-icon">e<wbr>User</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_umbral_.iencrypteddata.html#id" class="tsd-kind-icon">id</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_umbral_.iencrypteddata.html#matchingindex" class="tsd-kind-icon">matching<wbr>Index</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_umbral_.iencrypted.html#encryptedmap" class="tsd-kind-icon">encrypted<wbr>Map</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_umbral_.iencrypted.html#malformed" class="tsd-kind-icon">malformed</a></li>
 							</ul>
 						</section>
 					</div>
@@ -104,52 +101,22 @@
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="eoc" class="tsd-anchor"></a>
-					<h3>eOC</h3>
-					<div class="tsd-signature tsd-kind-icon">eOC<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
+					<a name="encryptedmap" class="tsd-anchor"></a>
+					<h3>encrypted<wbr>Map</h3>
+					<div class="tsd-signature tsd-kind-icon">encrypted<wbr>Map<span class="tsd-signature-symbol">:</span> <a href="_umbral_.iencryptedmap.html" class="tsd-signature-type">IEncryptedMap</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/multiparty/umbral/blob/82b36a0/src/umbral.ts#L9">umbral.ts:9</a></li>
+							<li>Defined in <a href="https://github.com/multiparty/umbral/blob/82b36a0/src/umbral.ts#L34">umbral.ts:34</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="erecord" class="tsd-anchor"></a>
-					<h3>e<wbr>Record</h3>
-					<div class="tsd-signature tsd-kind-icon">e<wbr>Record<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
+					<a name="malformed" class="tsd-anchor"></a>
+					<h3>malformed</h3>
+					<div class="tsd-signature tsd-kind-icon">malformed<span class="tsd-signature-symbol">:</span> <a href="_umbral_.imalformed.html" class="tsd-signature-type">IMalformed</a><span class="tsd-signature-symbol">[]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/multiparty/umbral/blob/82b36a0/src/umbral.ts#L10">umbral.ts:10</a></li>
-						</ul>
-					</aside>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="euser" class="tsd-anchor"></a>
-					<h3>e<wbr>User</h3>
-					<div class="tsd-signature tsd-kind-icon">e<wbr>User<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/multiparty/umbral/blob/82b36a0/src/umbral.ts#L11">umbral.ts:11</a></li>
-						</ul>
-					</aside>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="id" class="tsd-anchor"></a>
-					<h3>id</h3>
-					<div class="tsd-signature tsd-kind-icon">id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/multiparty/umbral/blob/82b36a0/src/umbral.ts#L12">umbral.ts:12</a></li>
-						</ul>
-					</aside>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="matchingindex" class="tsd-anchor"></a>
-					<h3>matching<wbr>Index</h3>
-					<div class="tsd-signature tsd-kind-icon">matching<wbr>Index<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/multiparty/umbral/blob/82b36a0/src/umbral.ts#L13">umbral.ts:13</a></li>
+							<li>Defined in <a href="https://github.com/multiparty/umbral/blob/82b36a0/src/umbral.ts#L35">umbral.ts:35</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -177,33 +144,24 @@
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
 						<a href="_umbral_.iderivedvalues.html" class="tsd-kind-icon">IDerived<wbr>Values</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
-						<a href="_umbral_.iencrypted.html" class="tsd-kind-icon">IEncrypted</a>
-					</li>
 				</ul>
 				<ul class="current">
 					<li class="current tsd-kind-interface tsd-parent-kind-external-module">
-						<a href="_umbral_.iencrypteddata.html" class="tsd-kind-icon">IEncrypted<wbr>Data</a>
+						<a href="_umbral_.iencrypted.html" class="tsd-kind-icon">IEncrypted</a>
 						<ul>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_umbral_.iencrypteddata.html#eoc" class="tsd-kind-icon">eOC</a>
+								<a href="_umbral_.iencrypted.html#encryptedmap" class="tsd-kind-icon">encrypted<wbr>Map</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_umbral_.iencrypteddata.html#erecord" class="tsd-kind-icon">e<wbr>Record</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_umbral_.iencrypteddata.html#euser" class="tsd-kind-icon">e<wbr>User</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_umbral_.iencrypteddata.html#id" class="tsd-kind-icon">id</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_umbral_.iencrypteddata.html#matchingindex" class="tsd-kind-icon">matching<wbr>Index</a>
+								<a href="_umbral_.iencrypted.html#malformed" class="tsd-kind-icon">malformed</a>
 							</li>
 						</ul>
 					</li>
 				</ul>
 				<ul class="after-current">
+					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
+						<a href="_umbral_.iencrypteddata.html" class="tsd-kind-icon">IEncrypted<wbr>Data</a>
+					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_umbral_.iencryptedmap.html" class="tsd-kind-icon">IEncrypted<wbr>Map</a>
 					</li>
