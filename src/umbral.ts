@@ -161,19 +161,25 @@ export class Umbral {
 
     const shares = this.OCDecrypt(pkOC, skOC, encryptedData, decryptedData);
 
-    while (encryptedData.length > 0) {
-      const encrypted = encryptedData.pop();
+    let tempEncrypted: IEncryptedData[] = [];
+
+    for (const e of encryptedData) {
+      tempEncrypted.push(e);
+    }
+
+    while (tempEncrypted.length > 0) {
+      const encrypted = tempEncrypted.pop();
 
       const s = shares[encrypted.id];
       delete shares[encrypted.id];
       let decryptedFlag = false;
 
-      for (const e of encryptedData) {
+      for (const e of tempEncrypted) {
         try {
           const k: Uint8Array = this.interpolateShares(s, shares[e.id]);
           if (this.decryptShare(k, s, encrypted, decryptedData)) {
             decryptedFlag = true;
-            encryptedData = this.tryAndDecrypt(k, shares, encryptedData, decryptedData);
+            tempEncrypted = this.tryAndDecrypt(k, shares, tempEncrypted, decryptedData);
             break;
           }
         } catch (e) {

@@ -139,6 +139,39 @@ function replaceMatchingIndex(matchingIndex: string, encrypted: IEncryptedMap) {
 
 
 describe('Basic end-to-end tests', () => {
+  it('Lisa Test', async function() {
+    await _sodium.ready;
+    const _umbral = new Umbral(_sodium);
+
+    var a: IEncryptedData = {eOC: "ZD6wV1lA2JsUTZEZUhySnJrwFstrdlro3ROM-Ho-RglfQHxpp0oJzalsS7EBDj24pyzV5n_VXM1__utFf9Zdu6Gvn1fG3ZP2hnPp2ltZRXWR94SCpZnp_U4L4DRW0bC7kEqCSntVKHf1crLt0qO4BC8W5NCLdNKUrbQZHvr0xEpnUC13A8sqURSYBkAa8oJQzobv0E45Jx4c79DjUm13cJ-TPK\
+    8zCRHn4eJ_QItOUCKyp2ZkHCsXt82MJnmLf-2e53A28qg6lx-6o0g7VBEfE2gvy13V6VS7KobEp1T1RLxF698rmU407viqVLt-UH-VHoZ-Ue5FsJzy4Erf6NWb4x6dCdowjj9-S0Cx1E9kD1VPDdh_3WgU0FJMhWLNLVwc9NCUgMYUGkgPSWu-2Rj-WO1V7ZM80mS2dnSJKeCISSRsTVEDmdYrLLYrhoYN\
+    3RqJePhyzS0j1FoY",
+    eRecord: "5yP9RKlv-XC-jxNWwb4b51DnERP7S-WtdfjeR79cfCjiplAzej2WVYTCXShDE1QSAtGxnJrswdO9qUgI3Y-kJZbSGhE927fAdlvrmoYyycCozlacImhjEYS5-4BS4NgrRUXBIVx0Esoa6ZsnItsuv9mTSH0BYDw91tNH8slCNrbbEyQNLf7sCs2nUUGu6Vy_862KirPrv0wwRYJ2lKyhU2L-\
+    Gy33Bt9GG8Q_lWAV6Ioj1mwi6yNT8qZh0p5ugWXLEno_JNOJ6I1VNW2UBV1JdjzG1JesV49uafvT3fItG-nL9ktNPJGCohpWble5F4bgaT64PD304n_6Dq79YeuieEhujM0HNq_Ldwl5WPlaSCxUWm-wHump6zAuyspsBnfzulA$30JfSDL3xZx89g75UMOoH10Hz2F0_OO_",
+    eUser: null,
+    id: '6',
+    matchingIndex: "lz0HhzwFayI2R5PhtviQCDZGcCX4eLfMb1V1YK14b-M"};
+
+    var b: IEncryptedData = {
+    eOC: "l4gKQ5MgtirXVL6rDU_OhOdsJOibSQpYd85MBXLraE9kh0lCGoXJocD6lOq90yIrkLyBCtlYSrTgd9jInQj6hqKQ3JfPbal9LHW_bVABXPK_tv7qpAiCrrvdINlJwY4LDxZLczxLTpOv9MXBtt-X-_TOVWH7lyAuEghEpNQuJqvu-4UqD9498Q7Y8aKfa2mwc2fl09tv6kfH4Mjc_gyu96bqoNy2\
+    rr0HP7NF2jUnRtJrN92rVUSeUHmGj2cR813fTiWT8i-_i5ZNyPDTBfsNjKWXPU66Ix2IMX_XHqCp09hk-shrZxRhHmEwrTpzRli2bO8IHO_IYBuV25IOx0U7nBQFjgfoZKpU4e10_BaybM-7olIokv_8XWPWKfZ59vAt6WXGKhCXB2TWJOKibZqORT6QuWbznv8fxoChcmwgPJZJS6IDx0onbsNDgcT7qd\
+    0NjOuIDgPUPfiEFA",
+    eRecord: "KijyHhTZUXqSC4K4q4WKE62PPxbOmWt6tZowCQcsl0K-h8o3KrJHydXc4CTlkIDuqHff4Un2aqfBOSJl2qsvFq9gnyB5WaBv17zT7VLzlG7n4p_t3Lv7_xzfhaVYTo9wlRsguRujTzaJShgb2Ueh871ee2TT_R1Jtw_LVBi4bvWWD_gKInlzP_FwgZNcNzXfA4Rcn9Rtpi-Lqb7XtJa2-YZY\
+    -qWuNOIngaHXU05xtkaELlXtzPc9lXwDkDn07jizGtE2FQDRCncWpqL4yn346LmBxtv67_MkLHxNxlGzUV-BoVMTaQ-Hi1Rje5fzO9rhmq7mi-3jNFyaW0YtJfTSOdHpuP_CxftgMT93cWbksrNoVVHgzZBP8aOjSFXLFLVwCIEVVAXo$Zx7sJoSF9whk8D0_jqT3Za-eaFq7jg-i",
+    eUser: null,
+    id: '4',
+    matchingIndex: "lz0HhzwFayI2R5PhtviQCDZGcCX4eLfMb1V1YK14b-M"
+    }
+    
+    const userKeyPair = _sodium.crypto_box_keypair();
+
+    var [publicKeys, privateKeys] = generateKeys(1);
+
+    _umbral.decryptData([a,b], userKeyPair.publicKey, userKeyPair.privateKey);
+
+
+  });
+
   it('1 OC, 2 matched users', async function() {
 
     let encryptedDict: IEncryptedMap = {};
